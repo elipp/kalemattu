@@ -134,11 +134,11 @@ fn syllabify(word: &mut word_t) {
     }
 
 //println!("Word: \"{}\", # syllables: {}", word.chars, word.syllables.len());
-    //for s in word.syllables.iter() {
-    //    print!("{} - ", s);
-    //}
-    //println!("\n");
-
+//    for s in word.syllables.iter() {
+//        print!("{} - ", s);
+//    }
+//    println!("\n");
+//
 }
 
 fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
@@ -170,6 +170,7 @@ fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
 
             syllabify(&mut w);
             words.push(w);
+
         }
 
     }
@@ -184,10 +185,20 @@ fn get_random(rng: &mut StdRng, min: usize, max: usize) -> usize {
 
 
 fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
-	let windex = ((word_list.len() as i32) - 1) as usize;
+	let windex = word_list.len();
 	let word = &word_list[get_random(rng, 0, windex)];
 
 	return word;
+}
+
+fn get_vocal_state(syllable: &str) -> i32 {
+	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
+		return 1;
+	} else if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
 fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize) -> String {
@@ -197,13 +208,51 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 	let num_syllables = get_random(rng, 1, max_syllables);
 
-	while n < num_syllables {
-		let word = get_random_word(&word_list, rng);
-		let syl = get_random_syllable(&word, rng);
+	let mut vocal_state = -1;
 
-		if n > 0 && n < num_syllables-1 { 
-			if rng.gen::<f64>() < 0.05 {
-				new_word.push('-');
+	while n < num_syllables {
+		let mut word = get_random_word(&word_list, rng);
+		let mut syl = get_random_syllable(&word, rng);
+
+		let this_vocal_state = get_vocal_state(&syl); 
+
+		if vocal_state == -1 {
+			if this_vocal_state != -1 {
+				vocal_state = this_vocal_state;
+			}
+		}
+
+		else  {
+			while get_vocal_state(&syl) != vocal_state {
+				word = get_random_word(&word_list, rng);
+				syl = get_random_syllable(&word, rng);
+			}
+		}
+
+//		if n > 0 && n < num_syllables-1 { 
+//			if rng.gen::<f64>() < 0.05 {
+//			new_word.push('-');
+//			}
+//		}
+
+		if n == num_syllables - 1 {
+			// finnish words never end in 'p', 'k' 'm' 'h' or 'r' 
+			let mut last_char = syl.chars().last().unwrap();
+
+			while last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' {
+
+				word = get_random_word(&word_list, rng);
+				syl = get_random_syllable(&word, rng);
+
+				while get_vocal_state(&syl) != vocal_state {
+					word = get_random_word(&word_list, rng);
+					syl = get_random_syllable(&word, rng);
+				}
+
+				println!("{}", syl);
+
+				last_char = syl.chars().last().unwrap();
+
 			}
 		}
 
@@ -220,7 +269,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 fn get_random_syllable(word: &word_t, rng: &mut StdRng) -> String {
 
-	let sindex = ((word.syllables.len() as i32) - 1) as usize;
+	let sindex = (word.syllables.len() as i32) as usize;
 	let syl = &word.syllables[get_random(rng, 0, sindex)];
 	
 	return syl.to_string();
