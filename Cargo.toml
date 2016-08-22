@@ -1,0 +1,12 @@
+[package]
+name = "kalemattu"
+version = "0.0.000001"
+authors = ["toni pillu <toni@haistpaksa.com>"]
+
+[dependencies]
+rand = "*" 
+time = "*"
+
+[[bin]]
+name = "kalemattu"
+path = "src/kalemattu.rs"

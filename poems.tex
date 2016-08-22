@@ -1,0 +1,110 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Poem
+% LaTeX Template
+% Version 1.0 (2/11/2015)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+% General notes:
+% 1) All lines in a verse environment must end with \\, the last verse in a stanza
+% must end in \\!
+% 2) This template is based on the verse package, see the package documentation
+% included with the template for further customisation options
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT CONFIGURATIONS AND INFORMATION
+%----------------------------------------------------------------------------------------
+
+\documentclass[12pt, a4paper]{article} % Document font size and paper size
+
+\usepackage{verse} % Required for typesetting poems - this package drives this template
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % International character encodings
+\usepackage{palatino} % Use the Palatino font by default
+%\usepackage{stix} % Alternative Stix font
+
+\usepackage[object=vectorian]{pgfornament} %%  http://altermundus.com/pages/tkz/ornament/index.html
+
+
+\setlength{\parindent}{0pt} % Disable paragraph indentation
+
+% Author styles
+\newcommand{\poemauthorcenter}[1]{\nopagebreak{\centering\footnotesize\textsc{#1}\par}} % Author as a footnote at the end of the poem center aligned
+\newcommand{\poemauthorright}[1]{\nopagebreak{\raggedleft\footnotesize\textsc{#1}\par}} % Author as a footnote at the end of the poem aligned right
+
+\renewcommand{\poemtitlefont}{\normalfont\bfseries\large\centering} % Define the poem title style
+
+\setlength{\stanzaskip}{0.75\baselineskip} % The distance between stanzas
+
+%\pagestyle{empty} % Stop page numbering through the document
+
+\newcommand{\sectionlinetwo}[2]{%
+  \nointerlineskip \vspace{.5\baselineskip}\hspace{\fill}
+  {\resizebox{0.5\linewidth}{1.2ex}
+    {\pgfornament[color = #1]{#2}
+    }}%
+    \hspace{\fill}
+    \par\nointerlineskip \vspace{.5\baselineskip}
+  }
+
+
+\begin{document}
+
+\begin{titlepage}
+
+\centering
+
+{\fontsize{45}{50}\selectfont K. P. Murtomaa\par}
+
+\vspace{5cm}
+\sectionlinetwo{black}{80}
+\vspace{5cm}
+
+{\fontsize{38}{60}\selectfont \itshape Runoja\par}
+
+
+% Bottom of the page
+
+\end{titlepage}
+
+%----------------------------------------------------------------------------------------
+%	POEM ONE
+%----------------------------------------------------------------------------------------
+
+%\input{runot.tex}
+\poemtitle{Liehaajona}
+
+\settowidth{\versewidth}{ASDFASDFDAFDFAASDSAasdfasdf}
+\begin{verse}[\versewidth]
+
+onky-etu luonäikäy, nimatku \\
+hen jallau \\
+päännä, hat, mät vakortuolsor milsimi. \\
+etveluok aimise vä \\
+sikvul kartetjoväi \\!
+
+
+
+poi otuiljuuvaa heihehil, täväes onkoansalku \\
+silaivaano mail, hei! \\!
+
+
+\end{verse}
+\newpage
+
+
+
+\newpage
+
+
+\end{document}
