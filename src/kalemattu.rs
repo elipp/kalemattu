@@ -296,7 +296,12 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_w
 					new_verse.push('.');
 				}
 			} else {
-				new_verse.push_str(", ");
+				let r = rng.gen::<f64>();
+				if r < 0.10 {
+					new_verse.push_str("; ");
+				} else {
+					new_verse.push_str(", ");
+				}
 			}
 		}
 		else {
