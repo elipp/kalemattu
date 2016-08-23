@@ -185,7 +185,7 @@ fn get_random(rng: &mut StdRng, min: usize, max: usize) -> usize {
 }
 
 
-fn generate_distribution(min: usize, max: usize) -> Vec<usize> {
+fn generate_distribution_mid(min: usize, max: usize) -> Vec<usize> {
 	let middle: usize = ((max-min)/2) + 1;
 	let mut distr: Vec<usize> = Vec::new();
 
@@ -198,6 +198,20 @@ fn generate_distribution(min: usize, max: usize) -> Vec<usize> {
 			for j in i..(max+1) {
 				distr.push(i);
 			}
+		}
+	}
+
+	return distr;
+
+}
+
+fn generate_distribution_low(min: usize, max: usize) -> Vec<usize> {
+
+	let mut distr: Vec<usize> = Vec::new();
+
+	for i in min..(max+1) {
+		for j in i..(max+1) {
+			distr.push(i);
 		}
 	}
 
@@ -237,7 +251,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let mut n = 0;
 	let mut new_word = String::new();
 
-	let distr = generate_distribution(1, max_syllables);
+	let distr = generate_distribution_mid(1, max_syllables);
 	let num_syllables = get_random_with_distribution(rng, &distr);
 
 	let mut vocal_state = -1;
@@ -355,7 +369,7 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_
 	
 	while i < max_verses {
 		new_stanza.push('\n');
-		let distr = generate_distribution(1, 5);
+		let distr = generate_distribution_mid(1, 5);
 		let max_words = get_random_with_distribution(rng, &distr);
 		let new_verse = generate_random_verse(word_list, rng, max_words);
 
@@ -438,7 +452,8 @@ fn main() {
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
 
-    let distr = generate_distribution(1, 4);
+    let distr = generate_distribution_low(1, 4);
+
     let num_words_title = get_random_with_distribution(&mut rng, &distr);
     let title = capitalize_first(&generate_random_verse(&source, &mut rng, num_words_title));
 
