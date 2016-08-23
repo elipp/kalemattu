@@ -3,6 +3,7 @@ extern crate time;
 
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
 use std::env;
 use rand::{Rng, SeedableRng, StdRng};
 use std::hash::{Hash, SipHasher, Hasher};
@@ -249,8 +250,6 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 					syl = get_random_syllable(&word, rng);
 				}
 
-				println!("{}", syl);
-
 				last_char = syl.chars().last().unwrap();
 
 			}
@@ -289,7 +288,7 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_w
 		if rng.gen::<f64>() < 0.15 {
 			if j == max_words - 1 {
 				let r = rng.gen::<f64>();
-				if (r < 0.3) {
+				if r < 0.3 {
 					new_verse.push('!');
 				}
 				else {
@@ -318,7 +317,7 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_w
 	
 }
 
-fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_verses: usize) -> String {
+fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_verses: usize, LaTeX_output: bool) -> String {
 
 	let mut new_stanza = String::new();
 	let mut i = 0;
@@ -332,17 +331,25 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_
 
 		if i == max_verses - 1 {
 			let r = rng.gen::<f64>();
-			if r < 0.05 {
+			if r < 0.80 {
+				let last_char = new_stanza.chars().last().unwrap();
+				if last_char == '.' {
+					new_stanza.pop();
+				}
 				new_stanza.push('?');
 			}
 		}
 
-		new_stanza.push_str(" \\\\");
+		if LaTeX_output {
+			new_stanza.push_str(" \\\\");
+		}
 
 		i = i + 1;
 	}
 
-	new_stanza.push_str("!\n\n");
+	if LaTeX_output { 
+		new_stanza.push_str("!\n\n");
+	}
 
 	return new_stanza;
 
@@ -364,8 +371,25 @@ fn main() {
     let source = read_file_to_words("kalevala.txt");
 
     let mut hasher = SipHasher::new();
+    let mut stderr = std::io::stderr();
 
-    let args: Vec<_> = env::args().collect();
+    let mut args: Vec<_> = env::args().collect();
+    let mut a_index = 0;
+
+    let mut LaTeX_output: bool = false;
+
+    for a in args.iter() {
+	if a == "--latex" {
+		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
+		LaTeX_output = true;
+		break;
+	}
+	a_index = a_index + 1;
+    }
+
+    if LaTeX_output { args.remove(a_index); }
+
+
     let s = match args.len() {
     	2 => { 
 		args[1].hash(&mut hasher);
@@ -378,20 +402,25 @@ fn main() {
     let seed: &[_] = &[s,s,s,s];
 
     let mut rng: StdRng = SeedableRng::from_seed(seed);
-//    println!("\n(info: using {} as random seed)\n\n", s);
+    writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
+
+    let title = capitalize_first(&generate_random_verse(&source, &mut rng, 4));
+
+    if LaTeX_output {
+	    println!("\\poemtitle{{{}}}\n", title);
+	    println!("\\settowidth{{\\versewidth}}{{ASDFASDFDAFDFAASDSAasdfasdf}}");
+	    println!("\\begin{{verse}}[\\versewidth]");
+    } else {
+	    println!("{}\n", title);
+    }
 
     let num_stanzas = get_random(&mut rng, 1, 5); 
     let mut i = 0;
-
-    let title = capitalize_first(&construct_random_word(&source, &mut rng, 4));
-    println!("\\poemtitle{{{}}}\n", title);
-    println!("\\settowidth{{\\versewidth}}{{ASDFASDFDAFDFAASDSAasdfasdf}}");
-    println!("\\begin{{verse}}[\\versewidth]");
-
+    
     while i < num_stanzas {
 
     	let num_verses = get_random(&mut rng, 1, 8);
-	let new_stanza = generate_random_stanza(&source, &mut rng, num_verses);
+	let new_stanza = generate_random_stanza(&source, &mut rng, num_verses, LaTeX_output);
 
 	println!("{}", new_stanza);
 
@@ -399,8 +428,10 @@ fn main() {
 
     }
 
-    println!("\\end{{verse}}");
-    println!("\\newpage");
+    if LaTeX_output {
+	    println!("\\end{{verse}}");
+	    println!("\\newpage");
+    }
 
 
 }
