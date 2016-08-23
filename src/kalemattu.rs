@@ -331,7 +331,7 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_
 
 		if i == max_verses - 1 {
 			let r = rng.gen::<f64>();
-			if r < 0.80 {
+			if r < 0.15 {
 				let last_char = new_stanza.chars().last().unwrap();
 				if last_char == '.' {
 					new_stanza.pop();
