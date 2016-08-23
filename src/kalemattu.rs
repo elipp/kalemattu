@@ -185,6 +185,36 @@ fn get_random(rng: &mut StdRng, min: usize, max: usize) -> usize {
 }
 
 
+fn generate_distribution(min: usize, max: usize) -> Vec<usize> {
+	let middle: usize = ((max-min)/2) + 1;
+	let mut distr: Vec<usize> = Vec::new();
+
+	for i in min..(max+1) {
+		if i <= middle {
+			for j in 0..i {
+				distr.push(i);
+			}
+		} else {
+			for j in i..(max+1) {
+				distr.push(i);
+			}
+		}
+	}
+
+	return distr;
+
+}
+
+fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
+
+	let r = rng.gen::<f64>();
+	let index = (r * (distr.len() as f64)) as usize;
+	let R = distr[index];
+
+	return R;
+}
+
+
 fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
 	let windex = word_list.len();
 	let word = &word_list[get_random(rng, 0, windex)];
@@ -207,7 +237,8 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let mut n = 0;
 	let mut new_word = String::new();
 
-	let num_syllables = get_random(rng, 1, max_syllables);
+	let distr = generate_distribution(1, max_syllables);
+	let num_syllables = get_random_with_distribution(rng, &distr);
 
 	let mut vocal_state = -1;
 
@@ -324,7 +355,8 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_
 	
 	while i < max_verses {
 		new_stanza.push('\n');
-		let max_words = get_random(rng, 1, 5);
+		let distr = generate_distribution(1, 5);
+		let max_words = get_random_with_distribution(rng, &distr);
 		let new_verse = generate_random_verse(word_list, rng, max_words);
 
 		new_stanza.push_str(&new_verse);
@@ -399,12 +431,16 @@ fn main() {
 	_ => time::precise_time_ns() as usize
     };
 
+
+
     let seed: &[_] = &[s,s,s,s];
 
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
 
-    let title = capitalize_first(&generate_random_verse(&source, &mut rng, 4));
+    let distr = generate_distribution(1, 4);
+    let num_words_title = get_random_with_distribution(&mut rng, &distr);
+    let title = capitalize_first(&generate_random_verse(&source, &mut rng, num_words_title));
 
     if LaTeX_output {
 	    println!("\\poemtitle{{{}}}\n", title);
