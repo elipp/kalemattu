@@ -219,6 +219,21 @@ fn generate_distribution_low(min: usize, max: usize) -> Vec<usize> {
 
 }
 
+fn generate_distribution_high(min: usize, max: usize) -> Vec<usize> {
+
+	let mut distr: Vec<usize> = Vec::new();
+
+	for i in min..(max+1) {
+		for j in i..(max+1) {
+			distr.push((max+2) - i);
+		}
+	}
+
+	return distr;
+
+}
+
+
 fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
 
 	let r = rng.gen::<f64>();
@@ -236,7 +251,7 @@ fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a 
 	return word;
 }
 
-fn get_vocal_state(syllable: &str) -> i32 {
+fn get_vowel_harmony_state(syllable: &str) -> i32 {
 	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
 		return 1;
 	} else if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
@@ -244,6 +259,36 @@ fn get_vocal_state(syllable: &str) -> i32 {
 	} else {
 		return -1;
 	}
+}
+
+fn get_num_trailing_vowels(word: &str) -> usize {
+	let mut num = 0;
+	for c in word.chars().rev() {
+		if vc_map(c) == 'V' {
+			num = num+1;
+		}
+		else {
+			break;
+		}
+	}
+
+
+	return num;
+}
+
+fn get_num_beginning_vowels(syl: &str) -> usize {
+	let mut num = 0;
+	for c in syl.chars() {
+		if vc_map(c) == 'V' {
+			num = num+1;
+		}
+		else {
+			break;
+		}
+
+	}
+
+	return num;
 }
 
 fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize) -> String {
@@ -254,50 +299,45 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let distr = generate_distribution_mid(1, max_syllables);
 	let num_syllables = get_random_with_distribution(rng, &distr);
 
-	let mut vocal_state = -1;
+	let mut vharm_state = -1;
 
 	while n < num_syllables {
-		let mut word = get_random_word(&word_list, rng);
-		let mut syl = get_random_syllable(&word, rng);
+		let mut syl = get_random_syllable_any(&word_list, rng);
 
-		let this_vocal_state = get_vocal_state(&syl); 
+		let this_vharm_state = get_vowel_harmony_state(&syl); 
 
-		if vocal_state == -1 {
-			if this_vocal_state != -1 {
-				vocal_state = this_vocal_state;
+		if vharm_state == -1 {
+		// we're still in "undefined vocal harmony" == only either 'e's or 'i's have been encountered
+			if this_vharm_state != -1 {
+				vharm_state = this_vharm_state;
 			}
 		}
 
 		else  {
-			while get_vocal_state(&syl) != vocal_state {
-				word = get_random_word(&word_list, rng);
-				syl = get_random_syllable(&word, rng);
+			
+			while get_vowel_harmony_state(&syl) != vharm_state {
+				syl = get_random_syllable_any(&word_list, rng);
 			}
+
+			let mut vowels_beg = get_num_beginning_vowels(&syl);
+
 		}
 
-//		if n > 0 && n < num_syllables-1 { 
-//			if rng.gen::<f64>() < 0.05 {
-//			new_word.push('-');
-//			}
-//		}
-
 		if n == num_syllables - 1 {
-			// finnish words never end in 'p', 'k' 'm' 'h' or 'r' 
+			// finnish words never end in 'p', 'k' 'm' 'h' or 'r'
 			let mut last_char = syl.chars().last().unwrap();
 
 			while last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' {
-
-				word = get_random_word(&word_list, rng);
-				syl = get_random_syllable(&word, rng);
-
-				while get_vocal_state(&syl) != vocal_state {
-					word = get_random_word(&word_list, rng);
-					syl = get_random_syllable(&word, rng);
-				}
-
+				syl = get_random_syllable_any(&word_list, rng);
 				last_char = syl.chars().last().unwrap();
-
 			}
+
+			while get_vowel_harmony_state(&syl) != vharm_state {
+				syl = get_random_syllable_any(&word_list, rng);
+			}
+
+
+
 		}
 
 		new_word.push_str(&syl);
@@ -305,53 +345,64 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 		n = n + 1;
 	}
 
-	return new_word;
+	if new_word.chars().count() < 2 {
+		return construct_random_word(word_list, rng, max_syllables);
+	} else {
+		return new_word;
+	}
 
 }
 
 
 
-fn get_random_syllable(word: &word_t, rng: &mut StdRng) -> String {
+fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng) -> String {
 
 	let sindex = (word.syllables.len() as i32) as usize;
 	let syl = &word.syllables[get_random(rng, 0, sindex)];
 	
 	return syl.to_string();
+}
 
+fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
+	let word = get_random_word(word_list, rng);
+	let syl = get_random_syllable_from_word(&word, rng);
+
+	return syl;
 }
 
 
-fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_words: usize) -> String {
+fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize) -> String {
 	let mut j = 0;
 	let mut new_verse = String::new();
 
-	while j < max_words {
+//	println!("num_words: {}", num_words);
+
+	while j < num_words {
 
 		let new_word = construct_random_word(&word_list, rng, 4);
-
 		new_verse.push_str(&new_word);
-		if rng.gen::<f64>() < 0.15 {
-			if j == max_words - 1 {
-				let r = rng.gen::<f64>();
-				if r < 0.3 {
-					new_verse.push('!');
-				}
-				else {
-					new_verse.push('.');
-				}
-			} else {
-				let r = rng.gen::<f64>();
-				if r < 0.10 {
-					new_verse.push_str("; ");
-				} else {
-					new_verse.push_str(", ");
-				}
+
+		let r = rng.gen::<f64>();
+
+		if r < 0.15 {
+			if j == num_words - 1 {
+				new_verse.push('!');
 			}
 		}
-		else {
-			if j != max_words - 1 {
-				new_verse.push(' ');
+
+		else if j < num_words - 1 {
+			if r < 0.17 {
+				new_verse.push_str(";");
+			} 
+			
+			else if r < 0.30 {
+				new_verse.push_str(",");
 			}
+
+		}
+
+		if j != num_words - 1 {
+			new_verse.push(' ');
 		}
 
 
@@ -362,20 +413,20 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_w
 	
 }
 
-fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_verses: usize, LaTeX_output: bool) -> String {
+fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, LaTeX_output: bool) -> String {
 
 	let mut new_stanza = String::new();
 	let mut i = 0;
 	
-	while i < max_verses {
+	while i < num_verses {
 		new_stanza.push('\n');
-		let distr = generate_distribution_mid(1, 5);
-		let max_words = get_random_with_distribution(rng, &distr);
-		let new_verse = generate_random_verse(word_list, rng, max_words);
+		let distr = generate_distribution_high(2, 4);
+		let num_words = get_random_with_distribution(rng, &distr);
+		let new_verse = generate_random_verse(word_list, rng, num_words);
 
 		new_stanza.push_str(&new_verse);
 
-		if i == max_verses - 1 {
+		if i == num_verses - 1 {
 			let r = rng.gen::<f64>();
 			if r < 0.15 {
 				let last_char = new_stanza.chars().last().unwrap();
@@ -383,6 +434,9 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_
 					new_stanza.pop();
 				}
 				new_stanza.push('?');
+			}
+			else if r < 0.25 {
+				new_stanza.push('.');
 			}
 		}
 
@@ -412,39 +466,151 @@ fn capitalize_first(word: &str) -> String {
 
 }
 
+
+fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool) -> String {
+
+    let distr = generate_distribution_low(1, 3);
+
+    let num_words_title = get_random_with_distribution(rng, &distr);
+    let mut max_syllables = 4;
+    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables));
+
+    for i in 1..num_words_title {
+	    title = title + " " + &construct_random_word(word_database, rng, max_syllables);
+    }
+
+    let mut poem = String::new();
+
+    if LaTeX {
+	    poem.push_str(&format!("\\poemtitle{{{}}}\n", title));
+	    poem.push_str(&format!("\\settowidth{{\\versewidth}}{{{}}}\n", "levaton, sitän kylpää ranjoskan"));
+	    poem.push_str("\\begin{verse}[\\versewidth]\n");
+    } else {
+	    poem.push_str(&format!("{}\n", &title));
+    }
+
+    let num_stanzas = get_random(rng, 1, 5); 
+    let mut i = 0;
+    
+    while i < num_stanzas {
+
+	let distr = generate_distribution_mid(1, 8);
+    	let num_verses = get_random_with_distribution(rng, &distr);
+	let new_stanza = generate_random_stanza(word_database, rng, num_verses, LaTeX);
+
+	poem.push_str(&format!("{}\n", new_stanza));
+
+	i = i + 1;
+
+    }
+
+    if LaTeX {
+	    poem.push_str("\\end{verse}\n");
+	    poem.push_str("\\newpage\n");
+    }
+
+    return poem;
+}
+
+static LATEX_PREAMBLE: &'static str = 
+
+r#"\documentclass[12pt, a4paper]{article} 
+
+\usepackage{verse}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} 
+\usepackage{palatino} 
+
+\usepackage[object=vectorian]{pgfornament} %%  http://altermundus.com/pages/tkz/ornament/index.html
+
+\setlength{\parindent}{0pt} 
+\renewcommand{\poemtitlefont}{\normalfont\bfseries\large\centering} 
+
+\setlength{\stanzaskip}{0.75\baselineskip} 
+
+\newcommand{\sectionlinetwo}[2]{%
+\nointerlineskip \vspace{.5\baselineskip}\hspace{\fill}
+{\pgfornament[width=0.5\linewidth, color = #1]{#2}}
+\hspace{\fill}
+\par\nointerlineskip \vspace{.5\baselineskip}
+}%
+\begin{document}
+"#;
+
+fn latex_print_preamble() {
+	println!("{}", LATEX_PREAMBLE);
+}
+
+fn latex_print_title_page(poet: &str) {
+	println!(
+
+"\\begin{{titlepage}}
+\\centering
+{{\\fontsize{{45}}{{50}}\\selectfont {} \\par}}
+\\vspace{{5cm}}
+\\sectionlinetwo{{darkgray}}{{44}}
+\\vspace{{5cm}}
+{{\\fontsize{{35}}{{60}}\\selectfont \\itshape Runoja\\par}}
+\\end{{titlepage}}", 
+
+	poet);
+
+}
+
+fn print_as_latex_document(poems: &Vec<String>, poetname: &str) {
+	latex_print_preamble();
+	latex_print_title_page(poetname);
+
+	for p in poems {
+		println!("{}", p);
+	}
+
+	println!("\\end{{document}}");
+
+}
+
+
 fn main() {
 
     let source = read_file_to_words("kalevala.txt");
 
-    let mut hasher = SipHasher::new();
     let mut stderr = std::io::stderr();
 
     let mut args: Vec<_> = env::args().collect();
-    let mut a_index = 0;
 
+    let mut numeric_seed: bool = false;
     let mut LaTeX_output: bool = false;
 
     for a in args.iter() {
 	if a == "--latex" {
 		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
 		LaTeX_output = true;
-		break;
 	}
-	a_index = a_index + 1;
+	else if a == "--numeric" {
+		writeln!(&mut stderr, "\n(info: option --numeric provided, interpreting given seed as base-10 integer)").unwrap();
+		numeric_seed = true;
+	}
     }
 
-    if LaTeX_output { args.remove(a_index); }
-
+    // this should remove any arguments beginning with "--"
+    args.retain(|i|i.chars().take(2).collect::<Vec<char>>() != &['-', '-']);
 
     let s = match args.len() {
     	2 => { 
-		args[1].hash(&mut hasher);
-		hasher.finish() as usize
+		match numeric_seed {
+			true => args[1].parse::<usize>().unwrap(),
+
+			false =>  {
+				let mut hasher = SipHasher::new();
+				args[1].hash(&mut hasher);
+				hasher.finish() as usize
+			}
+		}
 	},
 
 	_ => time::precise_time_ns() as usize
     };
-
 
 
     let seed: &[_] = &[s,s,s,s];
@@ -452,37 +618,25 @@ fn main() {
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
 
-    let distr = generate_distribution_low(1, 4);
+    let mut poems: Vec<String> = Vec::new();
 
-    let num_words_title = get_random_with_distribution(&mut rng, &distr);
-    let title = capitalize_first(&generate_random_verse(&source, &mut rng, num_words_title));
+   if LaTeX_output {
+	for i in 0..10 {
+		poems.push(generate_poem(&source, &mut rng, LaTeX_output));
+	}
 
-    if LaTeX_output {
-	    println!("\\poemtitle{{{}}}\n", title);
-	    println!("\\settowidth{{\\versewidth}}{{ASDFASDFDAFDFAASDSAasdfasdf}}");
-	    println!("\\begin{{verse}}[\\versewidth]");
-    } else {
-	    println!("{}\n", title);
-    }
+	let mut name = capitalize_first(&construct_random_word(&source, &mut rng, 3));
+	name.push(' ');
+	let second_initial = capitalize_first(&construct_random_word(&source, &mut rng, 1)).chars().next().unwrap();
+	name.push(second_initial);
+	name.push_str(". ");
+	let surname = capitalize_first(&construct_random_word(&source, &mut rng, 3));
+	name.push_str(&surname);
 
-    let num_stanzas = get_random(&mut rng, 1, 5); 
-    let mut i = 0;
-    
-    while i < num_stanzas {
+	print_as_latex_document(&poems, &name);
 
-    	let num_verses = get_random(&mut rng, 1, 8);
-	let new_stanza = generate_random_stanza(&source, &mut rng, num_verses, LaTeX_output);
-
-	println!("{}", new_stanza);
-
-	i = i + 1;
-
-    }
-
-    if LaTeX_output {
-	    println!("\\end{{verse}}");
-	    println!("\\newpage");
-    }
-
+   } else {
+	println!("{}", generate_poem(&source, &mut rng, LaTeX_output));
+   }
 
 }

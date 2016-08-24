@@ -1,89 +1,352 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Poem
-% LaTeX Template
-% Version 1.0 (2/11/2015)
-%
-% This template has been downloaded from:
-% http://www.LaTeXTemplates.com
-%
-% Original author:
-% Vel (vel@latextemplates.com)
-%
-% License:
-% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
-%
-% General notes:
-% 1) All lines in a verse environment must end with \\, the last verse in a stanza
-% must end in \\!
-% 2) This template is based on the verse package, see the package documentation
-% included with the template for further customisation options
-% 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt, a4paper]{article} 
 
-%----------------------------------------------------------------------------------------
-%	DOCUMENT CONFIGURATIONS AND INFORMATION
-%----------------------------------------------------------------------------------------
-
-\documentclass[12pt, a4paper]{article} % Document font size and paper size
-
-\usepackage{verse} % Required for typesetting poems - this package drives this template
+\usepackage{verse}
 
 \usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc} % International character encodings
-\usepackage{palatino} % Use the Palatino font by default
-%\usepackage{stix} % Alternative Stix font
+\usepackage[T1]{fontenc} 
+\usepackage{palatino} 
 
 \usepackage[object=vectorian]{pgfornament} %%  http://altermundus.com/pages/tkz/ornament/index.html
 
+\setlength{\parindent}{0pt} 
+\renewcommand{\poemtitlefont}{\normalfont\bfseries\large\centering} 
 
-\setlength{\parindent}{0pt} % Disable paragraph indentation
-
-% Author styles
-\newcommand{\poemauthorcenter}[1]{\nopagebreak{\centering\footnotesize\textsc{#1}\par}} % Author as a footnote at the end of the poem center aligned
-\newcommand{\poemauthorright}[1]{\nopagebreak{\raggedleft\footnotesize\textsc{#1}\par}} % Author as a footnote at the end of the poem aligned right
-
-\renewcommand{\poemtitlefont}{\normalfont\bfseries\large\centering} % Define the poem title style
-
-\setlength{\stanzaskip}{0.75\baselineskip} % The distance between stanzas
-
-%\pagestyle{empty} % Stop page numbering through the document
+\setlength{\stanzaskip}{0.75\baselineskip} 
 
 \newcommand{\sectionlinetwo}[2]{%
-  \nointerlineskip \vspace{.5\baselineskip}\hspace{\fill}
-  {\resizebox{0.5\linewidth}{1.2ex}
-    {\pgfornament[color = #1]{#2}
-    }}%
-    \hspace{\fill}
-    \par\nointerlineskip \vspace{.5\baselineskip}
-  }
-
-
+\nointerlineskip \vspace{.5\baselineskip}\hspace{\fill}
+{\pgfornament[width=0.5\linewidth, color = #1]{#2}}
+\hspace{\fill}
+\par\nointerlineskip \vspace{.5\baselineskip}
+}%
 \begin{document}
 
 \begin{titlepage}
-
 \centering
-
-{\fontsize{45}{50}\selectfont K. P. Murtomaa\par}
-
+{\fontsize{45}{50}\selectfont Honsa S. Onsulja \par}
 \vspace{5cm}
-\sectionlinetwo{black}{80}
+\sectionlinetwo{darkgray}{44}
 \vspace{5cm}
-
-{\fontsize{38}{60}\selectfont \itshape Runoja\par}
-
-
-% Bottom of the page
-
+{\fontsize{35}{60}\selectfont \itshape Runoja\par}
 \end{titlepage}
+\poemtitle{Onmainoin}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
 
-%----------------------------------------------------------------------------------------
-%	POEM ONE
-%----------------------------------------------------------------------------------------
+pääpäivä vailonrahais pipie kunoikjokaa \\
+sopuen, nilvääntä lusouanjo liesiitä \\
+kataluen otoa onta \\
+seplösävän onvasmo, nailaptoa timusjo \\!
 
-\input{runot.tex}
 
+
+kotjajois katakun sä kimettä \\
+aiahaalon näl lanka! \\!
+
+
+\end{verse}
 \newpage
 
+\poemtitle{Sokapa}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+miesloinoikla läikhynä! \\
+hansaupolkun lima levoarukat veisasa \\!
+
+
+
+kasaa uklai; noinonkut \\
+neolpa ta tuoltja \\
+pat vinvien muhjo \\
+tila; si kauhoonhansa leätä \\
+jo voilatnoil mie \\
+eimo; rankat lössäpäät sensä \\
+nilres lalkavapois satal \\!
+
+
+
+velapars taltuan sinaimon set! \\
+jo neinen sila mat \\
+karraukulvon tu \\
+kentaon mikssiänsä jau länänäil \\!
+
+
+
+siiton leltäsänjön, män, manai \\
+hia lennutpai sakahuros \\!
+
+
+
+joa kiänäpäsän noin senoin \\
+sielsaitu seiselä, matajo noinkaikkoksa \\
+täsysyt yöymän, sileparsta la \\
+mavalta muosa, nuopakuu \\
+poilla kätäläsä setkanjo \\
+sasaa sinytsäkyl ilkahu \\
+li maatjaai tapohalmat kanoin \\
+katsaka paroistuijat \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Oimus tiänvyö}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+selan ja! \\!
+
+
+
+uka lapokatu sylkähänvä hallauvan \\
+noin, rushan, hen sielvapan \\
+moasojuokau koita tämöirä annut \\!
+
+
+
+väilälnät voansa jytnyt \\
+roanukvui väipääsvä, täpäipääpöy! \\
+hytiän elrälylös vämöisän toajoisnoinvain \\
+ainanlana, jatla men? \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Eimiksei tulal}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+nutkalo jokusoupeu \\
+väesräntäky najuos lepuutto? \\!
+
+
+
+sajoto patuit, tyhtänytjön hohtuan! \\
+miestuosto nanla tuanrau, hei \\
+maalsukuun niä eiaria tatuorakat \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Vääntä seprii}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+talau suopohhuol \\
+kuoloilsa, vepa, na \\
+tasuta onjohoil \\
+me, syt sita \\
+konlonoi, taho eireälnänky lauka! \\
+livesuu hensä niinleontoi jala \\
+sakailuon sipohan! \\!
+
+
+
+näitämänmäel onku lene sitsa \\
+toihoilvan, an minto noikotuu \\
+siraholnan tomaman talannalsuin kanaisras \\
+hasa kankauhuo han, sielleri \\!
+
+
+
+henru mepu tätässtäteä \\
+hirti sennenle jälläkäytä \\
+kopasa sotas sen \\
+iänytsyövyö tasavoilma \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Aaljuos}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+totoinun silsettoisal sisuota \\
+näsyjä, le pääntäss tisahata \\
+tatasaa talaikuin vama pinon! \\
+kilätykäi, linen, neiosoi joanaivaa \\
+jousaatanlut tä kuinla veävännä \\!
+
+
+
+joturkut konju vato; po \\
+nutranma nukrustoit, kitata! \\
+reyhjääi sejosato etvensi \\
+miesää haonsia, päätyön \\
+lausulna te! \\
+noon kautuoskal noinkun, viskutlolhan \\!
+
+
+
+uitoi pitkanhakuu \\
+lasokuohon kau, oi seikpeaso \\!
+
+
+
+tukoil, hen yömänlääkät päiläl \\
+seppäijönmän, hai nental \\!
+
+
+
+päätäspä, lamoepa, kakoilval malearan \\
+ti talaala ka \\
+viemi koijon kornan \\
+tioi sakun velavas! \\
+rasloi kaulailvoi sihannanta, taatamut \\
+lätyön virtsilleta nyt, joon \\
+sipääiä sasoinhon kat \\
+toispamo, remmotuo nythänkäinä sii \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Saju ireävän}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+kernipo iske väntäsälän tualoi \\
+sotkon syötlänvän vientala tuesnoukean! \\
+vilielevät siinen nuokorsasaa \\
+nässänäilkiäl asjavasnun saatuo septupun \\
+koipatata te! \\
+setäälmä liljä joan vehetnen! \\
+viiki, viesiluita heit sila \\!
+
+
+
+mevatpa tuo vie lähypvän \\
+soras kuokolu \\
+polmon on tässlä mahonsuul \\
+tuokoro tyinytnä eikyyltä pääsväänläis \\
+neihenkilä mäntääl nen \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Ta pyyskäilä}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+ta lou pohtura \\
+salon mätsyl; januo \\
+paikanou, miseinen nasorhot rojolai \\
+hurskun kusuusahjuo pankarnai nälälä! \\
+papasiulau tykäyryt joijokat löyhyhän \\!
+
+
+
+vieeikal väänvyö pämät tävälvään \\
+kulo tulva sasauloa natakoajoil \\
+rätäs nikol \\
+noivan kehvituovat, eitätäs puhsiajaai \\
+kukosta setha turaikoi \\
+pi talankuin tien \\!
+
+
+
+lapohuo; ounasmon \\
+tuntajauta niaal, väjyekyl ato \\
+velve län on \\
+kanal kakaaktu lakako; täkälä! \\!
+
+
+
+heltyttä setämöimät; satata hansa \\!
+
+
+
+sipa poilu kin \\
+sala, saholl siili oikaula \\
+tykäykymsyö tama rille! \\
+saso hyväi sisenhyvä vanpui \\
+selri kuko tireno kaku \\
+mi noinu noin \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Ilkala}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+menkanpoi men, haskorta \\
+näty letjuuhon, läkiävään tui \\
+vatlosta län ky terhän \\
+henhan, nämän voan \\
+aataol toakahuosuo tarhovoi \\
+sikul onnoinvionta!. \\!
+
+
+
+kiräilä noinhoinjavoan anmata \\
+kokatsa ty savan sisaaon \\
+noppaisat nesi heheivai! \\
+ta kirau vehy \\
+moi pohjanoil tupa \\
+eikointakot la tata! \\!
+
+
+
+pokean, takan \\
+simeteä ahunlakhal mepuutoon palasaamo \\
+potkuntaasman paiva, nemi siitpääs \\!
+
+
+\end{verse}
+\newpage
+
+\poemtitle{Täkösy}
+\settowidth{\versewidth}{levaton, sitän kylpää ranjoskan}
+\begin{verse}[\versewidth]
+
+lihenmän pelnis kohhonvaskuu \\
+hetaonmat sakouka tilauhuo salasmu \\
+kosamaas tiat huojo näkä! \\
+möikä hoonsa veitti! \\
+loisaata ri si \\
+pakoivoi vot \\!
+
+
+
+keäkäyyömäi jönnähynä, nenpako \\
+jyttätyönhy liniin, kausa \\
+poikmasjotuo turlas \\
+tusasta lelsapoi on! \\
+ta joi, tako, netahiajo \\
+sisirrimä visavahlai poloisko. \\!
+
+
+
+metkiehksa loutui ononvankan, sätöil \\
+virtpuensaa tilikoilnoin, sainsut jaissaakul \\
+pajo aso sätäsä \\
+vinjoikoisnoin ti; masasa. \\!
+
+
+
+suu li korotkoituo \\
+muna isit, tuau \\
+lenretra tuonvanpohan neila \\!
+
+
+
+jaeltiatpol lutnan \\
+lenoitui; suiparon täältäjälä \\
+mapaitoi janlasjoton hepatta! \\
+veenkuntu sesämätä vanpa, jotsaisuul \\
+huojais onreaon toijo ka \\
+sise kauturhia, meinoinkun \\
+na saitsamkon, tuolakon; henlata \\!
+
+
+\end{verse}
+\newpage
 
 \end{document}
