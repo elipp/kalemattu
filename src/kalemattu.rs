@@ -330,6 +330,14 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 	let mut vharm_state = -1;
 
+	if num_syllables == 1 {
+		loop {
+			let w = get_random_word(word_list, rng);
+			if (w.syllables.len() == 1) { return w.chars.clone(); }
+		}
+	}
+
+
 	for n in 0..num_syllables {
 		let mut syl = get_random_syllable_any(&word_list, rng);
 
@@ -388,7 +396,14 @@ fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng) -> String {
 }
 
 fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
-	let word = get_random_word(word_list, rng);
+	let mut word = get_random_word(word_list, rng);
+	loop {
+		if word.syllables.len() == 1 {
+			word = get_random_word(word_list, rng);
+		} else {
+			break;
+		}
+	}
 	let syl = get_random_syllable_from_word(&word, rng);
 
 	return syl;
@@ -578,7 +593,7 @@ fn latex_print_title_page(poet: &str) {
 "\\begin{{titlepage}}
 \\centering
 {{\\fontsize{{45}}{{50}}\\selectfont {} \\par}}
-\\vspace{{5cm}}
+\\vspace{{4cm}}
 \\sectionlinetwo{{black}}{{7}}
 \\vspace{{5cm}}
 {{\\fontsize{{35}}{{60}}\\selectfont \\itshape Runoja\\par}}
@@ -662,7 +677,7 @@ fn main() {
     let mut poems: Vec<String> = Vec::new();
 
    if LaTeX_output {
-	for i in 0..10 {
+	for i in 0..50 {
 		poems.push(generate_poem(&source, &mut rng, LaTeX_output));
 	}
 
