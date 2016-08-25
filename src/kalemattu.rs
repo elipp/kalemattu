@@ -45,7 +45,6 @@ fn vc_map(c : char) -> char {
 
 struct word_t {
     chars : String,
-    vc_pattern : String,
     syllables : Vec<String>
 }
 
@@ -114,12 +113,37 @@ fn get_substring(word: &str, offset: usize, n: usize) -> String {
     return s;
 }
 
+fn get_vc_pattern(word: &str) -> String {
+
+	let mut p = String::new();
+	for c in word.chars() { p.push(vc_map(c)); }
+	return p;
+
+}
+
+static NON_DIPHTHONGS: &'static [&'static str] =
+&["ae", "ao", "ea", "eo", "ia", 
+"io", "iä", "oa", "oe", "ua",
+"ue", "ye", "yä", "äe", "äö", 
+"öä", "eä", "iö", "eö", "öe"];
+
+fn has_diphthong(syllable: &str) -> bool {
+	for n in NON_DIPHTHONGS {
+		if syllable.contains(n) { return false; }
+	}
+
+	return true;
+
+}
+
 fn syllabify(word: &mut word_t) {
 
     let mut offset = 0;
 
-    while offset < word.vc_pattern.chars().count() {
-    	let mut longest = find_longest_vc_match(&word.vc_pattern, offset);
+    let vc_pattern = get_vc_pattern(&word.chars); 
+
+    while offset < vc_pattern.chars().count() {
+    	let longest = find_longest_vc_match(&vc_pattern, offset);
 
         if longest.chars().count() < 1 {
 //            println!("(warning: syllabify() for word \"{}\" failed, no matches found)", word.chars);
@@ -128,18 +152,27 @@ fn syllabify(word: &mut word_t) {
         }
 
         else {
-            word.syllables.push(get_substring(&word.chars, offset, longest.chars().count()));
-            offset = offset + longest.chars().count();
-            //println!("word: {} offset = {}, vc pattern length = {}", word.chars, offset, word.vc_pattern.chars().count());
+	    let new_syl = get_substring(&word.chars, offset, longest.chars().count());
+	    if offset > 0 && longest.contains("VV") && !has_diphthong(&new_syl) {
+			// need to split this syllable into two
+			let vv_offset = longest.find("VV").unwrap();
+			let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
+			let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, longest.chars().count() - new_syl_split1.chars().count());
+
+			//println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
+			
+			word.syllables.push(new_syl_split1);
+			word.syllables.push(new_syl_split2);
+
+
+	    } else {
+		    word.syllables.push(new_syl);
+	    }
         }
+        
+	offset = offset + longest.chars().count();
     }
 
-//println!("Word: \"{}\", # syllables: {}", word.chars, word.syllables.len());
-//    for s in word.syllables.iter() {
-//        print!("{} - ", s);
-//    }
-//    println!("\n");
-//
 }
 
 fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
@@ -162,16 +195,11 @@ fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
 
     for x in s.split_whitespace() {
 
-        let mut w = word_t { chars : clean_string(x), vc_pattern : String::new(), syllables : Vec::new() };
+        let mut w = word_t { chars : clean_string(x), syllables : Vec::new() };
 
         if w.chars != "" {
-            for c in w.chars.chars() {
-                w.vc_pattern.push(vc_map(c));
-            }
-
             syllabify(&mut w);
             words.push(w);
-
         }
 
     }
@@ -318,15 +346,15 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 		loop { 
 			let last_char = syl.chars().last().unwrap();
 
-			if (get_vowel_harmony_state(&syl) != vharm_state) {
+			if get_vowel_harmony_state(&syl) != vharm_state {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 			else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 			else if (n == num_syllables - 1) &&  
-				last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' {
-				// finnish words never end in 'p', 'k' 'm' 'h' or 'r'
+				last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' || last_char == 'v' {
+				// finnish words never end in 'p', 'k' 'm' 'h' 'v' or 'r'
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 		
@@ -342,7 +370,8 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 	if new_word.chars().count() < 2 {
 		return construct_random_word(word_list, rng, max_syllables);
-	} else {
+	} 
+	else {
 		return new_word;
 	}
 
@@ -366,7 +395,7 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String 
 }
 
 
-fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize) -> String {
+fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool) -> String {
 	let mut new_verse = String::new();
 
 //	println!("num_words: {}", num_words);
@@ -378,18 +407,27 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 
 		let r = rng.gen::<f64>();
 
-		if r < 0.15 {
-			if j == num_words - 1 {
+		if last_verse && j == num_words - 1 {
+			
+			if r < 0.08 {
 				new_verse.push('!');
 			}
-		}
+			else if r < 0.15 {
+				new_verse.push('?');
+			}
+			else if r < 0.25 {
+				new_verse.push('.');
+			}
 
-		else if r < 0.17 {
-			new_verse.push_str(";");
-		} 
-			
-		else if r < 0.30 {
-			new_verse.push_str(",");
+		} else {
+			if r < 0.05 {
+				new_verse.push_str(";");
+			} 
+				
+			else if r < 0.25 {
+				new_verse.push_str(",");
+		
+			}
 
 		}
 
@@ -412,7 +450,7 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_
 		new_stanza.push('\n');
 		let distr = generate_distribution_high(2, 4);
 		let num_words = get_random_with_distribution(rng, &distr);
-		let new_verse = generate_random_verse(word_list, rng, num_words);
+		let new_verse = generate_random_verse(word_list, rng, num_words, i == num_verses - 1);
 
 		new_stanza.push_str(&new_verse);
 
@@ -462,7 +500,9 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool) -> 
     let distr = generate_distribution_low(1, 3);
 
     let num_words_title = get_random_with_distribution(rng, &distr);
-    let mut max_syllables = 4;
+
+    let max_syllables = 4;
+
     let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables));
 
     for i in 1..num_words_title {
@@ -539,7 +579,7 @@ fn latex_print_title_page(poet: &str) {
 \\centering
 {{\\fontsize{{45}}{{50}}\\selectfont {} \\par}}
 \\vspace{{5cm}}
-\\sectionlinetwo{{darkgray}}{{44}}
+\\sectionlinetwo{{black}}{{7}}
 \\vspace{{5cm}}
 {{\\fontsize{{35}}{{60}}\\selectfont \\itshape Runoja\\par}}
 \\end{{titlepage}}", 
@@ -557,6 +597,16 @@ fn print_as_latex_document(poems: &Vec<String>, poetname: &str) {
 	}
 
 	println!("\\end{{document}}");
+
+}
+
+fn generate_random_poetname(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
+
+	let first_name = capitalize_first(&construct_random_word(word_list, rng, 3));
+	let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1)).chars().next().unwrap();
+	let surname = capitalize_first(&construct_random_word(word_list, rng, 5));
+
+	return format!("{} {}. {}", first_name, second_initial, surname);
 
 }
 
@@ -592,6 +642,7 @@ fn main() {
 			true => args[1].parse::<usize>().unwrap(),
 
 			false =>  {
+				writeln!(&mut stderr, "\n(info: option --numeric not provided, hashing string \"{}\" to be used as seed.)", args[1]).unwrap();
 				let mut hasher = SipHasher::new();
 				args[1].hash(&mut hasher);
 				hasher.finish() as usize
@@ -615,15 +666,7 @@ fn main() {
 		poems.push(generate_poem(&source, &mut rng, LaTeX_output));
 	}
 
-	let mut name = capitalize_first(&construct_random_word(&source, &mut rng, 3));
-	name.push(' ');
-	let second_initial = capitalize_first(&construct_random_word(&source, &mut rng, 1)).chars().next().unwrap();
-	name.push(second_initial);
-	name.push_str(". ");
-	let surname = capitalize_first(&construct_random_word(&source, &mut rng, 3));
-	name.push_str(&surname);
-
-	print_as_latex_document(&poems, &name);
+	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
 
    } else {
 	println!("{}", generate_poem(&source, &mut rng, LaTeX_output));
