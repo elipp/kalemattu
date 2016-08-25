@@ -276,9 +276,11 @@ fn get_num_trailing_vowels(word: &str) -> usize {
 	return num;
 }
 
-fn get_num_beginning_vowels(syl: &str) -> usize {
+fn get_num_beginning_vowels(word: &str) -> usize {
 	let mut num = 0;
-	for c in syl.chars() {
+
+	for c in word.chars() {
+
 		if vc_map(c) == 'V' {
 			num = num+1;
 		}
@@ -293,7 +295,6 @@ fn get_num_beginning_vowels(syl: &str) -> usize {
 
 fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize) -> String {
 
-	let mut n = 0;
 	let mut new_word = String::new();
 
 	let distr = generate_distribution_mid(1, max_syllables);
@@ -301,7 +302,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 	let mut vharm_state = -1;
 
-	while n < num_syllables {
+	for n in 0..num_syllables {
 		let mut syl = get_random_syllable_any(&word_list, rng);
 
 		let this_vharm_state = get_vowel_harmony_state(&syl); 
@@ -313,37 +314,31 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 			}
 		}
 
-		else  {
 			
-			while get_vowel_harmony_state(&syl) != vharm_state {
+		loop { 
+			let last_char = syl.chars().last().unwrap();
+
+			if (get_vowel_harmony_state(&syl) != vharm_state) {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
-
-			let mut vowels_beg = get_num_beginning_vowels(&syl);
-
-		}
-
-		if n == num_syllables - 1 {
-			// finnish words never end in 'p', 'k' 'm' 'h' or 'r'
-			let mut last_char = syl.chars().last().unwrap();
-
-			while last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' {
-				syl = get_random_syllable_any(&word_list, rng);
-				last_char = syl.chars().last().unwrap();
-			}
-
-			while get_vowel_harmony_state(&syl) != vharm_state {
+			else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
-
-
+			else if (n == num_syllables - 1) &&  
+				last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' {
+				// finnish words never end in 'p', 'k' 'm' 'h' or 'r'
+				syl = get_random_syllable_any(&word_list, rng);
+			}
+		
+			else { break; }
 
 		}
 
 		new_word.push_str(&syl);
 
-		n = n + 1;
 	}
+
+	
 
 	if new_word.chars().count() < 2 {
 		return construct_random_word(word_list, rng, max_syllables);
@@ -372,12 +367,11 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String 
 
 
 fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize) -> String {
-	let mut j = 0;
 	let mut new_verse = String::new();
 
 //	println!("num_words: {}", num_words);
 
-	while j < num_words {
+	for j in 0..num_words {
 
 		let new_word = construct_random_word(&word_list, rng, 4);
 		new_verse.push_str(&new_word);
@@ -390,14 +384,12 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 			}
 		}
 
-		else if j < num_words - 1 {
-			if r < 0.17 {
-				new_verse.push_str(";");
-			} 
+		else if r < 0.17 {
+			new_verse.push_str(";");
+		} 
 			
-			else if r < 0.30 {
-				new_verse.push_str(",");
-			}
+		else if r < 0.30 {
+			new_verse.push_str(",");
 
 		}
 
@@ -405,8 +397,6 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 			new_verse.push(' ');
 		}
 
-
-		j = j + 1;
 	}
 
 	return new_verse;
@@ -430,7 +420,7 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_
 			let r = rng.gen::<f64>();
 			if r < 0.15 {
 				let last_char = new_stanza.chars().last().unwrap();
-				if last_char == '.' {
+				if last_char == '.' || last_char == ',' || last_char == '!' {
 					new_stanza.pop();
 				}
 				new_stanza.push('?');
@@ -483,7 +473,7 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool) -> 
 
     if LaTeX {
 	    poem.push_str(&format!("\\poemtitle{{{}}}\n", title));
-	    poem.push_str(&format!("\\settowidth{{\\versewidth}}{{{}}}\n", "levaton, sitän kylpää ranjoskan"));
+	    poem.push_str(&format!("\\settowidth{{\\versewidth}}{{{}}}\n", "levaton, sitän kylpää ranjoskan asdf"));
 	    poem.push_str("\\begin{verse}[\\versewidth]\n");
     } else {
 	    poem.push_str(&format!("{}\n", &title));
