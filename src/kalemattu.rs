@@ -348,7 +348,8 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	if num_syllables == 1 {
 		loop {
 			let w = get_random_word(word_list, rng);
-			if (w.syllables.len() == 1 || w.chars.chars().count() <=4) { return w.chars.clone(); }
+			let r = rng.gen::<f64>();
+			if w.syllables.len() == 1 || w.chars.chars().count() <= 4 || (r < 0.20 && w.chars.chars().count() <= 5) { return w.chars.clone(); }
 		}
 	}
 
