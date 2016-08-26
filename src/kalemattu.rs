@@ -140,7 +140,7 @@ fn has_diphthong(syllable: &str) -> bool {
 }
 
 static FORBIDDEN_CCOMBOS: &'static [&'static str] =
-&[ "nm", "mn", "sv", "vs", "kt", "tk", "sr", "sn", "tv", "sm", "ms", "tm"
+&[ "nm", "mn", "sv", "vs", "kt", "tk", "sr", "sn", "tv", "sm", "ms", "tm", "tl"
 ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
