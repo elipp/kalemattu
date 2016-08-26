@@ -125,7 +125,10 @@ static NON_DIPHTHONGS: &'static [&'static str] =
 &["ae", "ao", "ea", "eo", "ia", 
 "io", "iä", "oa", "oe", "ua",
 "ue", "ye", "yä", "äe", "äö", 
-"öä", "eä", "iö", "eö", "öe"];
+"öä", "eä", "iö", "eö", "öe",
+"äa", "aä", "oö", "öo", "yu", 
+"uy", "ya", "yu", "äu", "uä", 
+"uö", "öu", "öa", "aö" ];
 
 fn has_diphthong(syllable: &str) -> bool {
 	for n in NON_DIPHTHONGS {
@@ -134,6 +137,18 @@ fn has_diphthong(syllable: &str) -> bool {
 
 	return true;
 
+}
+
+static FORBIDDEN_CCOMBOS: &'static [&'static str] =
+&[ "nm", "mn", "sv", "vs", "kt", "tk", "sr", "sn", "tv", "sm", "ms", "tm"
+];
+
+fn has_forbidden_ccombos(word: &str) -> bool {
+	for c in FORBIDDEN_CCOMBOS {
+		if word.contains(c) { return true; }
+	}
+
+	return false;
 }
 
 fn syllabify(word: &mut word_t) {
@@ -333,7 +348,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	if num_syllables == 1 {
 		loop {
 			let w = get_random_word(word_list, rng);
-			if (w.syllables.len() == 1) { return w.chars.clone(); }
+			if (w.syllables.len() == 1 || w.chars.chars().count() <=4) { return w.chars.clone(); }
 		}
 	}
 
@@ -355,6 +370,9 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 			let last_char = syl.chars().last().unwrap();
 
 			if get_vowel_harmony_state(&syl) != vharm_state {
+				syl = get_random_syllable_any(&word_list, rng);
+			}
+			else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 			else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
@@ -677,7 +695,7 @@ fn main() {
     let mut poems: Vec<String> = Vec::new();
 
    if LaTeX_output {
-	for i in 0..50 {
+	for i in 0..10 {
 		poems.push(generate_poem(&source, &mut rng, LaTeX_output));
 	}
 
