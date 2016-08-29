@@ -140,8 +140,13 @@ fn has_diphthong(syllable: &str) -> bool {
 }
 
 static FORBIDDEN_CCOMBOS: &'static [&'static str] =
-&[ "nm", "mn", "sv", "vs", "kt", "tk", "sr", "sn", "tv", "sm", "ms", "tm", "tl"
-];
+&[ "nm", "mn", "sv", "vs", "kt", 
+"tk", "sr", "sn", "tv", "sm", 
+"ms", "tm", "tl", "nl", "tp", 
+"pt", "tn", "np", "sl", "th", 
+"td", "dt", "tf", "ln", "mt", 
+"kn", "kh", "lr", "kp", "nr",
+"ml" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -150,6 +155,20 @@ fn has_forbidden_ccombos(word: &str) -> bool {
 
 	return false;
 }
+
+static FORBIDDEN_ENDCONSONANTS : &'static [char] = 
+&[
+'p', 'k', 'r', 'm', 'h', 'v', 's', 'l'
+];
+
+fn has_forbidden_endconsonant(word: &str) -> bool {
+	for c in FORBIDDEN_ENDCONSONANTS {
+		let last_char = word.chars().last().unwrap();
+		if &last_char == c { return true; }
+	}
+
+	return false;
+}	
 
 fn syllabify(word: &mut word_t) {
 
@@ -288,20 +307,24 @@ fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
 
 
 fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
-	let windex = word_list.len();
-	let word = &word_list[get_random(rng, 0, windex)];
+	let word = &word_list[get_random(rng, 0, word_list.len())];
 
 	return word;
 }
 
-fn get_vowel_harmony_state(syllable: &str) -> i32 {
+fn get_vowel_harmony_state(syllable: &str) -> usize {
+	let mut state: usize = 0;
+
+	if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
+		state = state | 0x1;
+	} 
+
 	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
-		return 1;
-	} else if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
-		return 0;
-	} else {
-		return -1;
-	}
+		state = state | 0x2;
+	} 
+
+//	println!("word: \"{}\", returning vharm: {}", syllable, state);
+	return state;
 }
 
 fn get_num_trailing_vowels(word: &str) -> usize {
@@ -343,7 +366,6 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let distr = generate_distribution_mid(1, max_syllables);
 	let num_syllables = get_random_with_distribution(rng, &distr);
 
-	let mut vharm_state = -1;
 
 	if num_syllables == 1 {
 		loop {
@@ -353,24 +375,25 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 		}
 	}
 
+	let mut new_syllables: Vec<String> = Vec::new();
+	
+	let mut vharm_state = 0;
 
 	for n in 0..num_syllables {
+		
 		let mut syl = get_random_syllable_any(&word_list, rng);
-
-		let this_vharm_state = get_vowel_harmony_state(&syl); 
-
-		if vharm_state == -1 {
-		// we're still in "undefined vocal harmony" == only either 'e's or 'i's have been encountered
-			if this_vharm_state != -1 {
-				vharm_state = this_vharm_state;
-			}
-		}
-
-			
+		let mut syl_vharm: usize = 0;
+		
 		loop { 
-			let last_char = syl.chars().last().unwrap();
-
-			if get_vowel_harmony_state(&syl) != vharm_state {
+			syl_vharm = get_vowel_harmony_state(&syl); 
+			
+			if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
+				syl = get_random_syllable_any(&word_list, rng);
+			} 
+			else if n > 0 && syl.chars().count() < 2 {
+				syl = get_random_syllable_any(&word_list, rng);
+			}
+			else if new_syllables.contains(&syl) {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 			else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
@@ -379,9 +402,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 			else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
-			else if (n == num_syllables - 1) &&  
-				last_char == 'p' || last_char == 'k' || last_char == 'r' || last_char == 'm' || last_char == 'h' || last_char == 'v' {
-				// finnish words never end in 'p', 'k' 'm' 'h' 'v' or 'r'
+			else if (n == num_syllables - 1) && has_forbidden_endconsonant(&syl) {
 				syl = get_random_syllable_any(&word_list, rng);
 			}
 		
@@ -389,11 +410,18 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 		}
 
+		if vharm_state == 0 {
+		// we're still in "undefined vocal harmony" == only either 'e's or 'i's have been encountered
+			if syl_vharm > 0 {
+				vharm_state = syl_vharm;
+			}
+		}
+
+		new_syllables.push(syl.clone());
 		new_word.push_str(&syl);
 
 	}
 
-	
 
 	if new_word.chars().count() < 2 {
 		return construct_random_word(word_list, rng, max_syllables);
@@ -454,13 +482,15 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 			}
 
 		} else {
-			if r < 0.05 {
-				new_verse.push_str(";");
+			if r < 0.02 {
+				new_verse.push(';');
 			} 
 				
-			else if r < 0.25 {
-				new_verse.push_str(",");
+			else if r < 0.15 {
+				new_verse.push(',');
 		
+			} else if r < 0.18 {
+				new_verse.push(':')
 			}
 
 		}
@@ -487,20 +517,6 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_
 		let new_verse = generate_random_verse(word_list, rng, num_words, i == num_verses - 1);
 
 		new_stanza.push_str(&new_verse);
-
-		if i == num_verses - 1 {
-			let r = rng.gen::<f64>();
-			if r < 0.15 {
-				let last_char = new_stanza.chars().last().unwrap();
-				if last_char == '.' || last_char == ',' || last_char == '!' {
-					new_stanza.pop();
-				}
-				new_stanza.push('?');
-			}
-			else if r < 0.25 {
-				new_stanza.push('.');
-			}
-		}
 
 		if LaTeX_output {
 			new_stanza.push_str(" \\\\");
