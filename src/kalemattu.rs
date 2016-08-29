@@ -146,7 +146,10 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "pt", "tn", "np", "sl", "th", 
 "td", "dt", "tf", "ln", "mt", 
 "kn", "kh", "lr", "kp", "nr",
-"ml" ];
+"ml", "mk", "km", "nv", "sh",
+"ls", "hn", "tj", "sj", "pk", 
+"rl", "kr", "mj", "kl", "kj",
+"nj", "kv", "hs", "hl", "nh" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -359,6 +362,18 @@ fn get_num_beginning_vowels(word: &str) -> usize {
 	return num;
 }
 
+fn get_first_consonant(syl: &str) -> char {
+
+	for c in syl.chars() {
+		if vc_map(c) == 'C' {
+			return c;
+		}
+	}
+
+	return '0';
+
+}
+
 fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize) -> String {
 
 	let mut new_word = String::new();
@@ -378,6 +393,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let mut new_syllables: Vec<String> = Vec::new();
 	
 	let mut vharm_state = 0;
+	let mut prev_first_c = '0';
 
 	for n in 0..num_syllables {
 		
@@ -386,6 +402,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 		
 		loop { 
 			syl_vharm = get_vowel_harmony_state(&syl); 
+			let first_c = get_first_consonant(&syl);
 			
 			if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
 				syl = get_random_syllable_any(&word_list, rng);
@@ -404,9 +421,15 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 			}
 			else if (n == num_syllables - 1) && has_forbidden_endconsonant(&syl) {
 				syl = get_random_syllable_any(&word_list, rng);
+			} 
+			else if (first_c != '0' && first_c == prev_first_c) {
+				syl = get_random_syllable_any(&word_list, rng);
 			}
 		
-			else { break; }
+			else { 
+				prev_first_c = first_c;
+				break;
+			}
 
 		}
 
