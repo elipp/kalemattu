@@ -121,6 +121,17 @@ fn get_vc_pattern(word: &str) -> String {
 
 }
 
+fn get_vc_pattern_grep(word: &str) -> String {
+	let mut p = String::new();
+
+	p.push('^');
+	p.push_str(&get_vc_pattern(word));
+	p.push('$');
+
+	return p;
+
+}
+
 static NON_DIPHTHONGS: &'static [&'static str] =
 &["ae", "ao", "ea", "eo", "ia", 
 "io", "iä", "oa", "oe", "ua",
@@ -149,7 +160,8 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "ml", "mk", "km", "nv", "sh",
 "ls", "hn", "tj", "sj", "pk", 
 "rl", "kr", "mj", "kl", "kj",
-"nj", "kv", "hs", "hl", "nh" ];
+"nj", "kv", "hs", "hl", "nh",
+"pm", "mr", "tg", "mh", "hp" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -374,6 +386,31 @@ fn get_first_consonant(syl: &str) -> char {
 
 }
 
+static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
+&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy" ];
+
+fn ends_in_wrong_vowelcombo(word: &str) -> bool {
+	let vcp = get_vc_pattern_grep(&word);
+	if vcp.contains("VV$") {
+		let mut iter = word.chars().rev();
+		let last = iter.next().unwrap();
+		let second_last = iter.next().unwrap();
+
+		let mut lasttwo = String::new();
+		lasttwo.push(second_last);
+		lasttwo.push(last);
+
+		for ed in FORBIDDEN_VOWELENDINGS {
+			if ed == &lasttwo {
+				return true;
+			}
+
+		}
+	}
+
+	return false;
+}
+
 fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize) -> String {
 
 	let mut new_word = String::new();
@@ -397,7 +434,8 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 	for n in 0..num_syllables {
 		
-		let mut syl = get_random_syllable_any(&word_list, rng);
+		let ignore_last = n == 0;
+		let mut syl = get_random_syllable_any(&word_list, rng, ignore_last);
 		let mut syl_vharm: usize = 0;
 		
 		loop { 
@@ -405,25 +443,26 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 			let first_c = get_first_consonant(&syl);
 			
 			if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
-				syl = get_random_syllable_any(&word_list, rng);
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			} 
 			else if n > 0 && syl.chars().count() < 2 {
-				syl = get_random_syllable_any(&word_list, rng);
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			}
 			else if new_syllables.contains(&syl) {
-				syl = get_random_syllable_any(&word_list, rng);
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			}
 			else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
-				syl = get_random_syllable_any(&word_list, rng);
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			}
 			else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
-				syl = get_random_syllable_any(&word_list, rng);
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			}
-			else if (n == num_syllables - 1) && has_forbidden_endconsonant(&syl) {
-				syl = get_random_syllable_any(&word_list, rng);
+			else if (n == num_syllables - 1) && (has_forbidden_endconsonant(&syl) || ends_in_wrong_vowelcombo(&syl)) {
+//			else if (n == num_syllables - 1) && has_forbidden_endconsonant(&syl) {
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			} 
-			else if (first_c != '0' && first_c == prev_first_c) {
-				syl = get_random_syllable_any(&word_list, rng);
+			else if first_c != '0' && first_c == prev_first_c {
+				syl = get_random_syllable_any(&word_list, rng, ignore_last);
 			}
 		
 			else { 
@@ -457,15 +496,19 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 
 
-fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng) -> String {
+fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng, ignore_last: bool) -> String {
 
-	let sindex = (word.syllables.len() as i32) as usize;
+	let mut sindex: usize = word.syllables.len();
+	if ignore_last {
+		sindex -= 1;
+	}
+
 	let syl = &word.syllables[get_random(rng, 0, sindex)];
 	
 	return syl.to_string();
 }
 
-fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
+fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_last: bool) -> String {
 	let mut word = get_random_word(word_list, rng);
 	loop {
 		if word.syllables.len() == 1 {
@@ -474,7 +517,7 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng) -> String 
 			break;
 		}
 	}
-	let syl = get_random_syllable_from_word(&word, rng);
+	let syl = get_random_syllable_from_word(&word, rng, ignore_last);
 
 	return syl;
 }
