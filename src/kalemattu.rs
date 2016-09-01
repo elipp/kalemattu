@@ -161,7 +161,8 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "ls", "hn", "tj", "sj", "pk", 
 "rl", "kr", "mj", "kl", "kj",
 "nj", "kv", "hs", "hl", "nh",
-"pm", "mr", "tg", "mh", "hp" ];
+"pm", "mr", "tg", "mh", "hp",
+"kd", "dk" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
