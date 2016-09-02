@@ -162,7 +162,8 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "rl", "kr", "mj", "kl", "kj",
 "nj", "kv", "hs", "hl", "nh",
 "pm", "mr", "tg", "mh", "hp",
-"kd", "dk" ];
+"kd", "dk", "dl", "ld", "mv", 
+"vm", "pr" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -388,7 +389,7 @@ fn get_first_consonant(syl: &str) -> char {
 }
 
 static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
-&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy" ];
+&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi" ];
 
 fn ends_in_wrong_vowelcombo(word: &str) -> bool {
 	let vcp = get_vc_pattern_grep(&word);
@@ -636,12 +637,12 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool) -> 
 	    poem.push_str(&format!("{}\n", &title));
     }
 
-    let num_stanzas = get_random(rng, 1, 5); 
+    let num_stanzas = get_random(rng, 1, 2); 
     let mut i = 0;
     
     while i < num_stanzas {
 
-	let distr = generate_distribution_mid(1, 8);
+	let distr = generate_distribution_mid(1, 6);
     	let num_verses = get_random_with_distribution(rng, &distr);
 	let new_stanza = generate_random_stanza(word_database, rng, num_verses, LaTeX);
 
@@ -730,7 +731,7 @@ fn generate_random_poetname(word_list: &Vec<word_t>, rng: &mut StdRng) -> String
 
 fn main() {
 
-    let source = read_file_to_words("kalevala.txt");
+    let source = read_file_to_words("/home/elias/kalemattu/kalevala.txt");
 
     let mut stderr = std::io::stderr();
 
