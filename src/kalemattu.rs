@@ -163,7 +163,8 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "nj", "kv", "hs", "hl", "nh",
 "pm", "mr", "tg", "mh", "hp",
 "kd", "dk", "dl", "ld", "mv", 
-"vm", "pr", "hh" ];
+"vm", "pr", "hh", "pn", "tr",
+"ts", "ks" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -389,7 +390,7 @@ fn get_first_consonant(syl: &str) -> char {
 }
 
 static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
-&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi" ];
+&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu" ];
 
 fn ends_in_wrong_vowelcombo(word: &str) -> bool {
 	let vcp = get_vc_pattern_grep(&word);
