@@ -8,10 +8,14 @@ use std::env;
 use rand::{Rng, SeedableRng, StdRng};
 use std::hash::{Hash, SipHasher, Hasher};
 
-struct k_state {
+struct kstate_t {
 	numeric_seed: bool,
 	LaTeX_output: bool,
 	rules_apply: bool
+}
+
+struct meter_t {
+
 }
 
 
@@ -541,7 +545,7 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_las
 }
 
 
-fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &k_state) -> String {
+fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t) -> String {
 	let mut new_verse = String::new();
 
 //	println!("num_words: {}", num_words);
@@ -589,7 +593,7 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 	
 }
 
-fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &k_state) -> String {
+fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &kstate_t) -> String {
 
 	let mut new_stanza = String::new();
 	let mut i = 0;
@@ -629,7 +633,7 @@ fn capitalize_first(word: &str) -> String {
 }
 
 
-fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &k_state) -> String {
+fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &kstate_t) -> String {
 
     let distr = generate_distribution_low(1, 3);
 
@@ -760,7 +764,7 @@ fn main() {
 
     let mut args: Vec<_> = env::args().collect();
 
-    let mut state_vars = k_state { numeric_seed: false, LaTeX_output: false, rules_apply: true };
+    let mut state_vars = kstate_t { numeric_seed: false, LaTeX_output: false, rules_apply: true };
 
     for a in args.iter() {
 	if a == "--latex" {
@@ -806,8 +810,10 @@ fn main() {
     let mut poems: Vec<String> = Vec::new();
 
    if state_vars.LaTeX_output {
-	for i in 0..10 {
+	let mut i = 0;
+	while (i < 10) {
 		poems.push(generate_poem(&source, &mut rng, &state_vars));
+		i += 1;
 	}
 
 	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
