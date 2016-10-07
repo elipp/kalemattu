@@ -464,7 +464,7 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 				syl_vharm = get_vowel_harmony_state(&syl); 
 				let first_c = get_first_consonant(&syl);
 
-				if syl_vharm > 0 && syl_vharm != vharm_state {
+				if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
 					syl = get_random_syllable_any(&word_list, rng, ignore_last);
 				} 
 				else if n > 0 && syl.chars().count() < 2 {
