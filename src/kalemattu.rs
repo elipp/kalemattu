@@ -8,6 +8,13 @@ use std::env;
 use rand::{Rng, SeedableRng, StdRng};
 use std::hash::{Hash, SipHasher, Hasher};
 
+struct k_state {
+	numeric_seed: bool,
+	LaTeX_output: bool,
+	rules_apply: bool
+}
+
+
 fn vc_map(c : char) -> char {
 
     match c.is_alphabetic() {
@@ -534,14 +541,14 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_las
 }
 
 
-fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, rules_apply: bool) -> String {
+fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &k_state) -> String {
 	let mut new_verse = String::new();
 
 //	println!("num_words: {}", num_words);
 
 	for j in 0..num_words {
 
-		let new_word = construct_random_word(&word_list, rng, 4, rules_apply);
+		let new_word = construct_random_word(&word_list, rng, 4, state.rules_apply);
 		new_verse.push_str(&new_word);
 
 		let r = rng.gen::<f64>();
@@ -582,7 +589,7 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 	
 }
 
-fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, LaTeX_output: bool, rules_apply: bool) -> String {
+fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &k_state) -> String {
 
 	let mut new_stanza = String::new();
 	let mut i = 0;
@@ -591,18 +598,18 @@ fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_
 		new_stanza.push('\n');
 		let distr = generate_distribution_high(2, 4);
 		let num_words = get_random_with_distribution(rng, &distr);
-		let new_verse = generate_random_verse(word_list, rng, num_words, i == num_verses - 1, rules_apply);
+		let new_verse = generate_random_verse(word_list, rng, num_words, i == num_verses - 1, state);
 
 		new_stanza.push_str(&new_verse);
 
-		if LaTeX_output {
+		if state.LaTeX_output {
 			new_stanza.push_str(" \\\\");
 		}
 
 		i = i + 1;
 	}
 
-	if LaTeX_output { 
+	if state.LaTeX_output { 
 		new_stanza.push_str("!\n\n");
 	}
 
@@ -622,7 +629,7 @@ fn capitalize_first(word: &str) -> String {
 }
 
 
-fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool, rules_apply: bool) -> String {
+fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &k_state) -> String {
 
     let distr = generate_distribution_low(1, 3);
 
@@ -630,15 +637,15 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool, rul
 
     let max_syllables = 4;
 
-    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables, rules_apply));
+    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables, state.rules_apply));
 
     for i in 1..num_words_title {
-	    title = title + " " + &construct_random_word(word_database, rng, max_syllables, rules_apply);
+	    title = title + " " + &construct_random_word(word_database, rng, max_syllables, state.rules_apply);
     }
 
     let mut poem = String::new();
 
-    if LaTeX {
+    if state.LaTeX_output {
 	    poem.push_str(&format!("\\poemtitle{{{}}}\n", title));
 	    poem.push_str(&format!("\\settowidth{{\\versewidth}}{{{}}}\n", "levaton, sitän kylpää ranjoskan asdf"));
 	    poem.push_str("\\begin{verse}[\\versewidth]\n");
@@ -653,7 +660,7 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool, rul
 
 	let distr = generate_distribution_mid(1, 6);
     	let num_verses = get_random_with_distribution(rng, &distr);
-	let new_stanza = generate_random_stanza(word_database, rng, num_verses, LaTeX, rules_apply);
+	let new_stanza = generate_random_stanza(word_database, rng, num_verses, state);
 
 	poem.push_str(&format!("{}\n", new_stanza));
 
@@ -661,7 +668,7 @@ fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, LaTeX: bool, rul
 
     }
 
-    if LaTeX {
+    if state.LaTeX_output {
 	    poem.push_str("\\end{verse}\n");
 	    poem.push_str("\\newpage\n");
     }
@@ -753,22 +760,20 @@ fn main() {
 
     let mut args: Vec<_> = env::args().collect();
 
-    let mut numeric_seed: bool = false;
-    let mut LaTeX_output: bool = false;
-    let mut rules_apply: bool = true;
+    let mut state_vars = k_state { numeric_seed: false, LaTeX_output: false, rules_apply: true };
 
     for a in args.iter() {
 	if a == "--latex" {
 		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
-		LaTeX_output = true;
+		state_vars.LaTeX_output = true;
 	}
 	else if a == "--numeric" {
 		writeln!(&mut stderr, "\n(info: option --numeric provided, interpreting given seed as base-10 integer)").unwrap();
-		numeric_seed = true;
+		state_vars.numeric_seed = true;
 	}
 	else if a == "--chaos" {
 		writeln!(&mut stderr, "\n(info: option --chaos provided, disabling all filtering rules!)").unwrap();
-		rules_apply = false;
+		state_vars.rules_apply = false;
 	}
     }
 
@@ -777,7 +782,7 @@ fn main() {
 
     let s = match args.len() {
     	2 => { 
-		match numeric_seed {
+		match state_vars.numeric_seed {
 			true => args[1].parse::<usize>().unwrap(),
 
 			false =>  {
@@ -800,15 +805,15 @@ fn main() {
 
     let mut poems: Vec<String> = Vec::new();
 
-   if LaTeX_output {
+   if state_vars.LaTeX_output {
 	for i in 0..10 {
-		poems.push(generate_poem(&source, &mut rng, LaTeX_output, rules_apply));
+		poems.push(generate_poem(&source, &mut rng, &state_vars));
 	}
 
 	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
 
    } else {
-	println!("{}", generate_poem(&source, &mut rng, LaTeX_output, rules_apply));
+	println!("{}", generate_poem(&source, &mut rng, &state_vars));
    }
 
 }
