@@ -52,6 +52,17 @@ while (my $input = <$sock>) {
 
 	print $sock "PRIVMSG $channel : \n";
     }
+    elsif (index($input, "!boem") != -1) {
+	my @verses = split /\n/, `cargo run --release -- --chaos`;
+	foreach my $verse (@verses) {
+		if ($verse eq "") {
+			print $sock "PRIVMSG $channel : \n";
+		} else {
+			print $sock "PRIVMSG $channel :$verse\n";
+		}
+	}
+
+    }
     else {
         print "$input\n";
     }
