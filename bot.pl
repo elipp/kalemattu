@@ -61,6 +61,7 @@ while (my $input = <$sock>) {
 			print $sock "PRIVMSG $channel :$verse\n";
 		}
 	}
+	print $sock "PRIVMSG $channel : \n";
 
     }
     else {
