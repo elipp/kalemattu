@@ -54,9 +54,19 @@ fn vc_map(c : char) -> char {
 // (sprint.teri).[84]
 
 
+#[derive(Clone)]
+struct syl_t {
+    chars : String,
+    length_class : char
+}
+
 struct word_t {
     chars : String,
-    syllables : Vec<String>
+    syllables : Vec<syl_t>
+}
+
+struct foot_t {
+    spats : Vec<String> // "syllable patterns" :D
 }
 
 fn clean_string(data: &str) -> String {
@@ -67,21 +77,66 @@ fn get_nth(word: &str, n: usize) -> char {
 	return word.chars().nth(n).unwrap();
 }
 
-static VC_PATTERNS: &'static [&'static str] = &[
-    "V", "VC", "VV", "VVC", "VCC",
-    "CV", "CVC", "CVV", "CVVC", "CVCC", "CCV", "CCVC", "CCVV", "CCCV", "CCVVC", "CCVCC", "CCCVC", "CCCVCC"
+struct vcp_t <'a> {
+	P: &'a str,
+	L: char
+}
+
+//const VC_PATTERNS: &'static [vcp_t<'static>] = &[
+//    vcp_t {P : "V", L:'1' },
+//    vcp_t {P : "VC", L:'1' },
+//    vcp_t {P : "VV", L:'3' },
+//    vcp_t {P : "VVC", L:'3' },
+//    vcp_t {P : "VCC", L:'2' },
+//    vcp_t {P : "CV", L:'1' },
+//    vcp_t {P : "CVC", L:'2' },
+//    vcp_t {P : "CVV", L:'4' },
+//    vcp_t {P : "CVVC", L:'4' },
+//    vcp_t {P : "CVCC", L:'3' },
+//    vcp_t {P : "CCV", L:'1' },
+//    vcp_t {P : "CCVC", L:'2' },
+//    vcp_t {P : "CCVV", L:'3' },
+//    vcp_t {P : "CCVVC", L:'4' },
+//    vcp_t {P : "CCVCC", L:'2' },
+//    vcp_t {P : "CCCVC", L:'2' },
+//    vcp_t {P : "CCCVCC", L:'2' }
+//];
+
+const VC_PATTERNS: &'static [vcp_t<'static>] = &[
+    vcp_t {P : "V", L:'1' },
+    vcp_t {P : "VC", L:'1' },
+    vcp_t {P : "VV", L:'2' },
+    vcp_t {P : "VVC", L:'2' },
+    vcp_t {P : "VCC", L:'1' },
+    vcp_t {P : "CV", L:'1' },
+    vcp_t {P : "CVC", L:'1' },
+    vcp_t {P : "CVV", L:'2' },
+    vcp_t {P : "CVVC", L:'2' },
+    vcp_t {P : "CVCC", L:'1' },
+    vcp_t {P : "CCV", L:'1' },
+    vcp_t {P : "CCVC", L:'1' },
+    vcp_t {P : "CCVV", L:'2' },
+    vcp_t {P : "CCVVC", L:'2' },
+    vcp_t {P : "CCVCC", L:'1' },
+    vcp_t {P : "CCCVC", L:'1' },
+    vcp_t {P : "CCCVCC", L:'1' }
 ];
 
-fn find_longest_vc_match(vc: &str, offset: usize) -> &'static str {
-	let mut longest: &'static str = &"";
+fn find_longest_vc_match<'a>(vc: &str, offset: usize) -> &'a vcp_t {
+	static error_pat: vcp_t<'static> = vcp_t{ P:"", L:'0' };
+
+	let mut longest: &'static vcp_t = &error_pat;
+	let vclen = vc.chars().count();
 
 	for p in VC_PATTERNS {
 
 		let mut full_match = true;
 		let mut i = offset;
+		let &pat = &p.P;
+		let plen = pat.chars().count();
 
-		if (vc.chars().count() - offset) >= p.chars().count() {
-			for c in p.chars() {
+		if (vclen - offset) >= plen {
+			for c in pat.chars() {
 				if get_nth(vc, i) != c  {
 					full_match = false;
 					break;
@@ -90,23 +145,25 @@ fn find_longest_vc_match(vc: &str, offset: usize) -> &'static str {
 			}
 
 			if full_match {
-				if (vc.chars().count() - offset) > p.chars().count() {
-					if get_nth(p, p.chars().count() - 1) == 'C' {
+				if (vclen - offset) > plen {
+					if get_nth(pat, plen - 1) == 'C' {
 						// then the next letter can't be a vowel
-						if get_nth(vc, p.chars().count() + offset) == 'V'{
+						if get_nth(vc, plen + offset) == 'V'{
 							//println!("nextvowel check for {} at offset {} failed!", p, offset);
 							full_match = false;
 						}
 					}
 				}
 
-				if full_match && longest.chars().count() < p.chars().count() {
+				if full_match && longest.P.chars().count() < plen {
 					longest = p;
-                //    println!("new longest matching pattern: for {} -> {}", &vc[offset..], p);
+				//    println!("new longest matching pattern: for {} -> {}", &vc[offset..], p);
 				}
 			}
 		}
 	}
+
+//	println!("syllable: {}, pattern: {}, length class: {}", vc, longest.P, longest.L);
 
 	return longest;
 
@@ -143,23 +200,50 @@ fn get_vc_pattern_grep(word: &str) -> String {
 
 }
 
+const DIPHTHONGS: &'static [&'static str] =
+&[ "yi", "öi", "äi", "ui", "oi",
+"ai", "äy", "au", "yö", "öy",
+"uo", "ou", "ie", "ei", "eu",
+"iu", "ey", "iy"
+];
+
+const DOUBLEVOWELS: &'static [&'static str] =
+&[ 
+"aa", "ee", "ii", "oo", "uu", "yy", "ää", "öö"
+];
+
+
+
+
 static NON_DIPHTHONGS: &'static [&'static str] =
-&["ae", "ao", "ea", "eo", "ia", 
+&["ae", "ao", "ea", "eo", "ia",
 "io", "iä", "oa", "oe", "ua",
-"ue", "ye", "yä", "äe", "äö", 
+"ue", "ye", "yä", "äe", "äö",
 "öä", "eä", "iö", "eö", "öe",
-"äa", "aä", "oö", "öo", "yu", 
-"uy", "ya", "yu", "äu", "uä", 
+"äa", "aä", "oö", "öo", "yu",
+"uy", "ya", "yu", "äu", "uä",
 "uö", "öu", "öa", "aö" ];
 
 fn has_diphthong(syllable: &str) -> bool {
-	for n in NON_DIPHTHONGS {
-		if syllable.contains(n) { return false; }
-	}
-
-	return true;
-
+        for n in DIPHTHONGS {
+                if syllable.contains(n) { return true; }
+        }
+        return false;
 }
+
+fn has_double_vowel(syllable: &str) -> bool {
+    for n in DOUBLEVOWELS {
+        if syllable.contains(n) { return true; }
+    }
+
+    return false;
+}
+
+static ALLOWED_CCOMBOS: &'static [&'static str] =
+&[ "kk", "ll", "mm", "nn", "pp", "rr", "ss", "tt",
+"sd", "lk", "lt", "rt", "tr", "st", "tk", "mp"
+
+];
 
 static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 &[ "nm", "mn", "sv", "vs", "kt", 
@@ -176,7 +260,7 @@ static FORBIDDEN_CCOMBOS: &'static [&'static str] =
 "kd", "dk", "dl", "ld", "mv", 
 "vm", "pr", "hh", "pn", "tr",
 "ts", "ks", "md", "pj", "jp",
-"kg" ];
+"kg", "pv", "ph" ];
 
 fn has_forbidden_ccombos(word: &str) -> bool {
 	for c in FORBIDDEN_CCOMBOS {
@@ -205,36 +289,43 @@ fn syllabify(word: &mut word_t) {
     let mut offset = 0;
 
     let vc_pattern = get_vc_pattern(&word.chars); 
+    let vclen = vc_pattern.chars().count();
 
-    while offset < vc_pattern.chars().count() {
+    while offset < vclen {
     	let longest = find_longest_vc_match(&vc_pattern, offset);
+        let &pat = &longest.P;
+        let plen = pat.chars().count();
 
-        if longest.chars().count() < 1 {
+        if plen < 1 {
 //            println!("(warning: syllabify() for word \"{}\" failed, no matches found)", word.chars);
-	    word.syllables.push(word.chars.to_string());
+//	    word.syllables.push(word.chars.to_string());
             break;
         }
 
         else {
-	    let new_syl = get_substring(&word.chars, offset, longest.chars().count());
-	    if offset > 0 && longest.contains("VV") && !has_diphthong(&new_syl) {
-			// need to split this syllable into two
-			let vv_offset = longest.find("VV").unwrap();
-			let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
-			let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, longest.chars().count() - new_syl_split1.chars().count());
+            let new_syl = get_substring(&word.chars, offset, plen);
+            if offset > 0 && pat.contains("VV") && !has_diphthong(&new_syl) && !has_double_vowel(&new_syl) {
+                // need to split this syllable into two
+                let vv_offset = pat.find("VV").unwrap();
+                let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
+                let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, plen - new_syl_split1.chars().count());
 
-			//println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
-			
-			word.syllables.push(new_syl_split1);
-			word.syllables.push(new_syl_split2);
+                //println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
+                let vc1 = get_vc_pattern(&new_syl_split1);
+                let L1 = find_longest_vc_match(&vc1, 0);
+                let vc2 = get_vc_pattern(&new_syl_split2);
+                let L2 = find_longest_vc_match(&vc1, 0);
+
+                word.syllables.push(syl_t{chars: new_syl_split1, length_class: L1.L});
+                word.syllables.push(syl_t{chars: new_syl_split2, length_class: L2.L});
 
 
-	    } else {
-		    word.syllables.push(new_syl);
-	    }
+            } else {
+                word.syllables.push(syl_t{chars: new_syl, length_class: longest.L});
+            }
         }
         
-	offset = offset + longest.chars().count();
+        offset = offset + plen;
     }
 
 }
@@ -268,6 +359,16 @@ fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
 
     }
     return words;
+}
+
+
+fn compile_list_of_syllables(words: &Vec<word_t>) -> Vec<syl_t> {
+    let mut syllables: Vec<syl_t> = Vec::new();
+
+    for w in words {
+        syllables.extend(w.syllables.clone());
+    }
+    return syllables;
 }
 
 fn get_random(rng: &mut StdRng, min: usize, max: usize) -> usize {
@@ -433,7 +534,6 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 	let distr = generate_distribution_mid(1, max_syllables);
 	let num_syllables = get_random_with_distribution(rng, &distr);
 
-
 	if num_syllables == 1 {
 		loop {
 			let w = get_random_word(word_list, rng);
@@ -516,7 +616,89 @@ fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_s
 
 }
 
+fn construct_word_with_foot<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng, foot: &str) -> String {
+ 	let mut new_word = String::new();
 
+	let num_syllables = foot.chars().count();
+
+//	if num_syllables == 1 {
+//		loop {
+//			let w = get_random_word(word_list, rng);
+//			let r = rng.gen::<f64>();
+//
+//			if w.syllables.len() == 1 || 
+//			   w.chars.chars().count() <= 4 || 
+//			   (r < 0.20 && w.chars.chars().count() <= 5) {
+//
+//			       	return w.chars.clone(); 
+//			}
+//		}
+//	}
+
+	let mut new_syllables: Vec<String> = Vec::new();
+	
+	let mut vharm_state = 0;
+	let mut prev_first_c = '0';
+
+    for (n, LC) in foot.chars().enumerate() {
+
+        let ignore_last = n == 0;
+        let mut syl = get_syllable_with_lclass(&syllables, rng, LC);
+        let mut syl_vharm: usize = 0;
+
+        loop { 
+
+            syl_vharm = get_vowel_harmony_state(&syl); 
+            let first_c = get_first_consonant(&syl);
+
+//            println!("word (so far): {}, desired lclass: {} syl: {}", new_word, LC, syl);
+
+            if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            } 
+            else if n > 0 && syl.chars().count() < 2 {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            }
+            else if new_syllables.contains(&syl) {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            }
+            else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            }
+            else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            }
+            else if (n == num_syllables-1) && (has_forbidden_endconsonant(&syl) || ends_in_wrong_vowelcombo(&syl)) {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            } 
+            else if first_c != '0' && first_c == prev_first_c {
+                syl = get_syllable_with_lclass(&syllables, rng, LC);
+            }
+
+            else { 
+                prev_first_c = first_c;
+                break;
+            }
+
+        }
+
+        if vharm_state == 0 {
+            // we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
+            if syl_vharm > 0 {
+                vharm_state = syl_vharm;
+            }
+        }
+
+        new_syllables.push(syl.clone());
+        new_word.push_str(&syl);
+
+    }
+
+//    println!("{}", new_word);
+
+	return new_word;
+
+}   
 
 fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng, ignore_last: bool) -> String {
 
@@ -525,9 +707,9 @@ fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng, ignore_last: b
 		sindex -= 1;
 	}
 
-	let syl = &word.syllables[get_random(rng, 0, sindex)];
+	let syl = word.syllables[get_random(rng, 0, sindex)].chars.clone();
 	
-	return syl.to_string();
+	return syl;
 }
 
 fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_last: bool) -> String {
@@ -545,7 +727,31 @@ fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_las
 }
 
 
-fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t) -> String {
+fn get_random_syllable<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng) -> &'a syl_t {
+    let syl = &syllables[get_random(rng, 0, syllables.len() - 1)];
+    return syl;
+}
+
+fn get_syllable_with_lclass(syllables: &Vec<syl_t>, rng: &mut StdRng, length_class: char) -> String {
+
+	let mut syl = get_random_syllable(&syllables, rng);
+    loop {
+        if syl.length_class != length_class {
+            syl = get_random_syllable(&syllables, rng);
+   //         println!("{}, {} != {}", syl.chars, length_class, syl.length_class);
+        }
+        else {
+    //        println!("OK! {}, {} == {}", syl.chars, length_class, syl.length_class);
+            break;
+        }
+    }
+
+	return syl.chars.clone(); 
+
+}
+
+
+fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t, foot: &str) -> String {
 	let mut new_verse = String::new();
 
 //	println!("num_words: {}", num_words);
@@ -593,16 +799,35 @@ fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_w
 	
 }
 
+fn generate_verse_with_foot<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng, state: &kstate_t, foot: &str) -> String {
+    let mut new_verse = String::new();
+
+    for w in foot.split("-") {
+        let num_syllables = w.chars().count();
+        let w = construct_word_with_foot(syllables, rng, &w);
+        new_verse = new_verse + &w + " ";
+    }
+
+    return new_verse;
+}
+
 fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &kstate_t) -> String {
 
 	let mut new_stanza = String::new();
 	let mut i = 0;
+
+    let mut foot: foot_t = foot_t { spats: Vec::new() };
+
+    let syllables = compile_list_of_syllables(word_list);
+
+    foot.spats.push("211-21-2-221".to_string());
+    foot.spats.push("21-2-21-2-22".to_string());
+    foot.spats.push("2-111-12-121".to_string());
+    foot.spats.push("122-112-2".to_string());
 	
-	while i < num_verses {
+    for f in foot.spats {
 		new_stanza.push('\n');
-		let distr = generate_distribution_high(2, 4);
-		let num_words = get_random_with_distribution(rng, &distr);
-		let new_verse = generate_random_verse(word_list, rng, num_words, i == num_verses - 1, state);
+		let new_verse = generate_verse_with_foot(&syllables, rng, state, &f);
 
 		new_stanza.push_str(&new_verse);
 
@@ -755,12 +980,13 @@ fn main() {
 
     let mut source = read_file_to_words("kalevala.txt");
     if source.len() < 1 {
-	source = read_file_to_words("/home/elias/kalemattu/kalevala.txt");
+        source = read_file_to_words("/home/elias/kalemattu/kalevala.txt");
     }
     if source.len() < 1 {
-	writeln!(&mut stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!");
-	return;
+        writeln!(&mut stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!");
+        return;
     }
+
 
     let mut args: Vec<_> = env::args().collect();
 
@@ -811,7 +1037,7 @@ fn main() {
 
    if state_vars.LaTeX_output {
 	let mut i = 0;
-	while (i < 10) {
+	while i < 10 {
 		poems.push(generate_poem(&source, &mut rng, &state_vars));
 		i += 1;
 	}
