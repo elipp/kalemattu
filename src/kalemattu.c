@@ -69,7 +69,7 @@ char vc_map(char c) {
 
 struct syl_t {
 	char *chars;
-	size_t length;
+	long length;
 	char length_class;
 };
 
@@ -84,7 +84,7 @@ syl_t syl_create(const char* syl, char length_class) {
 
 struct sylvec_t {
 	syl_t *syllables;
-	size_t length;
+	long length;
 	size_t capacity;
 };
 
@@ -114,9 +114,28 @@ int sylvec_push_slice(sylvec_t *s, const sylvec_t *in) {
 	return 1;
 }
 
+char *sylvec_get_word(sylvec_t *s) {
+	long size = 0;
+	for (int i = 0; i < s->length; ++i) {
+		size += s->syllables[i].length;
+	}
+
+	char *buf = malloc(size + 1);
+	
+	long offset = 0;
+	for (int i = 0; i < s->length; ++i) {
+		strcpy(buf + offset, s->syllables[i].chars);
+		offset += s->syllables[i].length;
+	}
+
+	buf[size] = '\0';
+
+	return buf;
+}
+
 struct word_t {
 	char *chars;
-	size_t length;
+	long length;
 	sylvec_t syllables;
 }
 
@@ -135,9 +154,22 @@ int word_push_syllable(word_t *w, const syl_t *s) {
 	sylvec_push(&w->syllables, s);
 }
 
+struct dict_t {
+	word_t *words;
+	long num_words;
+};
+
+dict_t dict_create(word_t *words, long num_words) {
+	dict_t d;
+	d.words = words;
+	d.num_words = num_words;
+	
+	return d;
+}
+
 struct foot_t {
     char **spats; // "syllable patterns" :D
-    size_t num_spats;
+    long num_spats;
 }
 
 char *clean_string(const char* data) {
@@ -181,11 +213,11 @@ static const VC_PATTERNS[] = {
     vcp_t {NULL, '0'},
 };
 
-vcp_t *find_longest_vc_match(const char* vc, size_t offset) {
+vcp_t *find_longest_vc_match(const char* vc, long offset) {
 	static const vcp_t error_pat = {"", '0'};
 
 	vcp_t *longest = &error_pat;
-	size_t vclen = strlen(vc);
+	long vclen = strlen(vc);
 	vcp_t *current = &VC_PATTERNS[0];
 	while (current->pat != NULL) {
 	
@@ -559,7 +591,7 @@ word_t *construct_word_list(const char* buf, long num_words) {
 
 }
 
-word_t *read_file_to_words(const char* filename) {
+dictionary_t read_file_to_words(const char* filename) {
 	FILE *fp = fopen(filename, "r");
 	
 	if (!fp) {
@@ -569,10 +601,13 @@ word_t *read_file_to_words(const char* filename) {
 	char *buf = read_file_to_buffer(fp);
 	fclose(fp);
 
-	word_t *words = construct_word_list(buf, word_count(buf));
+	long wc = word_count(buf);
+	word_t *words = construct_word_list(buf, wc);
 	free(buf);
 
-	return words;
+	dictionary_t d = dict_create(words, wc);
+
+	return d;
 	
 }
 
@@ -638,245 +673,287 @@ long get_random(long min, long max) {
 	return rand() % max + min;
 }
 
+double get_randomf() {
+	return (double)rand() / (double)RAND_MAX;
+}
+
 
 // hardcode these in C 
-fn generate_distribution_mid(min: usize, max: usize) -> Vec<usize> {
-	let middle: usize = ((max-min)/2) + 1;
-	let mut distr: Vec<usize> = Vec::new();
 
-	for i in min..(max+1) {
-		if i <= middle {
-			for j in 0..i {
-				distr.push(i);
-			}
-		} else {
-			for j in i..(max+1) {
-				distr.push(i);
-			}
-		}
+
+//fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
+//
+//	let r = rng.gen::<f64>();
+//	let index = (r * (distr.len() as f64)) as usize;
+//	let R = distr[index];
+//
+//	return R;
+//}
+
+//fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
+//	let word = &word_list[get_random(rng, 0, word_list.len())];
+//
+//	return word;
+//}
+//
+
+word_t *get_random_word(dictionary_t *dict) {
+	return dict->words[get_random(0, dict->num_words)];
+}
+
+
+//fn get_vowel_harmony_state(syllable: &str) -> usize {
+//	let mut state: usize = 0;
+//
+//	if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
+//		state = state | 0x1;
+//	} 
+//
+//	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
+//		state = state | 0x2;
+//	} 
+//
+////	println!("word: \"{}\", returning vharm: {}", syllable, state);
+//	return state;
+//}
+
+static int str_hasanyof(const char* str, const char* chars) {
+	const char *c = &chars[0];
+
+	while (*c) {
+		if (strchr(str, *c)) { return 1; }
+	       	++c;
 	}
 
-	return distr;
-
+	return 0;
 }
 
-fn generate_distribution_low(min: usize, max: usize) -> Vec<usize> {
+int get_vowel_harmony_state(const char* syllable) {
+	int state = 0;
 
-	let mut distr: Vec<usize> = Vec::new();
+	if (str_hasanyof(syllable, "aou")) state |= 0x1;
+	if (str_hasanyof(syllable, "äöy")) state |= 0x2;
 
-	for i in min..(max+1) {
-		for j in i..(max+1) {
-			distr.push(i);
-		}
-	}
-
-	return distr;
-
-}
-
-fn generate_distribution_high(min: usize, max: usize) -> Vec<usize> {
-
-	let mut distr: Vec<usize> = Vec::new();
-
-	for i in min..(max+1) {
-		for j in i..(max+1) {
-			distr.push((max+2) - i);
-		}
-	}
-
-	return distr;
-
-}
-
-
-fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
-
-	let r = rng.gen::<f64>();
-	let index = (r * (distr.len() as f64)) as usize;
-	let R = distr[index];
-
-	return R;
-}
-
-
-fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
-	let word = &word_list[get_random(rng, 0, word_list.len())];
-
-	return word;
-}
-
-fn get_vowel_harmony_state(syllable: &str) -> usize {
-	let mut state: usize = 0;
-
-	if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
-		state = state | 0x1;
-	} 
-
-	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
-		state = state | 0x2;
-	} 
-
-//	println!("word: \"{}\", returning vharm: {}", syllable, state);
 	return state;
 }
 
-fn get_num_trailing_vowels(word: &str) -> usize {
-	let mut num = 0;
-	for c in word.chars().rev() {
-		if vc_map(c) == 'V' {
-			num = num+1;
-		}
-		else {
-			break;
-		}
-	}
+//
+//fn get_num_trailing_vowels(word: &str) -> usize {
+//	let mut num = 0;
+//	for c in word.chars().rev() {
+//		if vc_map(c) == 'V' {
+//			num = num+1;
+//		}
+//		else {
+//			break;
+//		}
+//	}
+//
+//
+//	return num;
+//}
 
+int get_num_trailing_vowels(const word_t *word) {
+	int num = 0;
+
+	while (vc_map(word->chars[word->length - num - 1]) == 'V' && num < word->length) ++num;
+
+	return num;
+
+}
+
+//fn get_num_beginning_vowels(word: &str) -> usize {
+//	let mut num = 0;
+//
+//	for c in word.chars() {
+//
+//		if vc_map(c) == 'V' {
+//			num = num+1;
+//		}
+//		else {
+//			break;
+//		}
+//
+//	}
+//
+//	return num;
+//}
+
+int get_num_beginning_vowels(const word_t *word) {
+	int num = 0;
+	while (vc_map(word->chars[num]) == 'V' && num < word->length) ++num;
 
 	return num;
 }
 
-fn get_num_beginning_vowels(word: &str) -> usize {
-	let mut num = 0;
+//fn get_first_consonant(syl: &str) -> char {
+//
+//	for c in syl.chars() {
+//		if vc_map(c) == 'C' {
+//			return c;
+//		}
+//	}
+//
+//	return '0';
+//
+//}
 
-	for c in word.chars() {
-
-		if vc_map(c) == 'V' {
-			num = num+1;
-		}
-		else {
-			break;
-		}
-
-	}
-
-	return num;
+char get_first_consonant(const char *str) {
+	int i = 0;
+	size_t len = strlen(str);
+	while (vc_map(word->chars[i]) != 'C' && num < len) ++i;
+	if (num == len) return '\0';
+	else return str[i];
 }
 
-fn get_first_consonant(syl: &str) -> char {
+//static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
+//&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu" ];
 
-	for c in syl.chars() {
-		if vc_map(c) == 'C' {
-			return c;
+static const char *FORBIDDEN_VOWELENDINGS[] = {
+"ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu", NULL
+};
+
+//fn ends_in_wrong_vowelcombo(word: &str) -> bool {
+//	let vcp = get_vc_pattern_grep(&word);
+//	if vcp.contains("VV$") {
+//		let mut iter = word.chars().rev();
+//		let last = iter.next().unwrap();
+//		let second_last = iter.next().unwrap();
+//
+//		let mut lasttwo = String::new();
+//		lasttwo.push(second_last);
+//		lasttwo.push(last);
+//
+//		for ed in FORBIDDEN_VOWELENDINGS {
+//			if ed == &lasttwo {
+//				return true;
+//			}
+//
+//		}
+//	}
+//
+//	return false;
+//}
+
+bool ends_in_wrong_vowelcombo(const char *str) {
+	const char* vcp = get_vc_pattern_grep(str);
+
+	if (strstr("VV$", vcp)) {
+		char *substr = get_substring(str, strlen(str) - 2, 2);
+		const char **f = &FORBIDDEN_VOWELENDINGS[0];
+
+		while (f) {
+			if (strncmp(*f, substr, 2) == 0) { return true; }
+			++f;
 		}
-	}
 
-	return '0';
-
-}
-
-static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
-&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu" ];
-
-fn ends_in_wrong_vowelcombo(word: &str) -> bool {
-	let vcp = get_vc_pattern_grep(&word);
-	if vcp.contains("VV$") {
-		let mut iter = word.chars().rev();
-		let last = iter.next().unwrap();
-		let second_last = iter.next().unwrap();
-
-		let mut lasttwo = String::new();
-		lasttwo.push(second_last);
-		lasttwo.push(last);
-
-		for ed in FORBIDDEN_VOWELENDINGS {
-			if ed == &lasttwo {
-				return true;
-			}
-
-		}
+		free(substr);
 	}
 
 	return false;
 }
 
-fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
+//fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
+char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_apply) {
 
-	let mut new_word = String::new();
+//	let mut new_word = String::new();
+	int num_syllables = 3; // get random blah balh	
 
-	let distr = generate_distribution_mid(1, max_syllables);
-	let num_syllables = get_random_with_distribution(rng, &distr);
-
-	if num_syllables == 1 {
-		loop {
-			let w = get_random_word(word_list, rng);
-			let r = rng.gen::<f64>();
-
-			if w.syllables.len() == 1 || 
-			   w.chars.chars().count() <= 4 || 
-			   (r < 0.20 && w.chars.chars().count() <= 5) {
-
-			       	return w.chars.clone(); 
+//	let distr = generate_distribution_mid(1, max_syllables);
+//	let num_syllables = get_random_with_distribution(rng, &distr);
+	if (num_syllables == 1) {
+		while (1) {
+			word_t *w = get_random_word(dict);
+			double r = get_randomf();
+			if (w->syllables.length > 1 || w->length <= 4 || r < 0.20 && w->length <= 5) {
+				return strdup(w->chars);
 			}
 		}
 	}
 
-	let mut new_syllables: Vec<String> = Vec::new();
-	
-	let mut vharm_state = 0;
-	let mut prev_first_c = '0';
+//	if num_syllables == 1 {
+//		loop {
+//			let w = get_random_word(word_list, rng);
+//			let r = rng.gen::<f64>();
+//
+//			if w.syllables.len() == 1 || 
+//			   w.chars.chars().count() <= 4 || 
+//			   (r < 0.20 && w.chars.chars().count() <= 5) {
+//
+//			       	return w.chars.clone(); 
+//			}
+//		}
+//	}
+//
+//	let mut new_syllables: Vec<String> = Vec::new();
+//	
+//	let mut vharm_state = 0;
+//	let mut prev_first_c = '0';
+//
+//	for n in 0..num_syllables {
+//		
+//		let ignore_last = n == 0;
+//		let mut syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//		let mut syl_vharm: usize = 0;
+//		
+//		if rules_apply {
+//			loop { 
+//				syl_vharm = get_vowel_harmony_state(&syl); 
+//				let first_c = get_first_consonant(&syl);
+//
+//				if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				} 
+//				else if n > 0 && syl.chars().count() < 2 {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				}
+//				else if new_syllables.contains(&syl) {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				}
+//				else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				}
+//				else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				}
+//				else if (n == num_syllables - 1) && (has_forbidden_endconsonant(&syl) || ends_in_wrong_vowelcombo(&syl)) {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				} 
+//				else if first_c != '0' && first_c == prev_first_c {
+//					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+//				}
+//
+//				else { 
+//					prev_first_c = first_c;
+//					break;
+//				}
+//
+//			}
+//
+//			if vharm_state == 0 {
+//				// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
+//				if syl_vharm > 0 {
+//					vharm_state = syl_vharm;
+//				}
+//			}
+//		}
+//
+//		new_syllables.push(syl.clone());
+//		new_word.push_str(&syl);
+//
+//	}
+//
+//
+//	if new_word.chars().count() < 2 {
+//		return construct_random_word(word_list, rng, max_syllables, rules_apply);
+//	} 
+//	else {
+//		return new_word;
+//	}
+//
+//}
 
-	for n in 0..num_syllables {
-		
-		let ignore_last = n == 0;
-		let mut syl = get_random_syllable_any(&word_list, rng, ignore_last);
-		let mut syl_vharm: usize = 0;
-		
-		if rules_apply {
-			loop { 
-				syl_vharm = get_vowel_harmony_state(&syl); 
-				let first_c = get_first_consonant(&syl);
 
-				if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				} 
-				else if n > 0 && syl.chars().count() < 2 {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				}
-				else if new_syllables.contains(&syl) {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				}
-				else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				}
-				else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				}
-				else if (n == num_syllables - 1) && (has_forbidden_endconsonant(&syl) || ends_in_wrong_vowelcombo(&syl)) {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				} 
-				else if first_c != '0' && first_c == prev_first_c {
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
-				}
-
-				else { 
-					prev_first_c = first_c;
-					break;
-				}
-
-			}
-
-			if vharm_state == 0 {
-				// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
-				if syl_vharm > 0 {
-					vharm_state = syl_vharm;
-				}
-			}
-		}
-
-		new_syllables.push(syl.clone());
-		new_word.push_str(&syl);
-
-	}
-
-
-	if new_word.chars().count() < 2 {
-		return construct_random_word(word_list, rng, max_syllables, rules_apply);
-	} 
-	else {
-		return new_word;
-	}
-
-}
 
 fn construct_word_with_foot<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng, foot: &str) -> String {
  	let mut new_word = String::new();
