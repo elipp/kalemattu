@@ -3,12 +3,22 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
 
-struct strvec_t {
+char *strdup(const char* str) {
+	size_t len = strlen(str);
+	char *r = malloc(len+1);
+	strcpy(r, str);
+
+	return r;
+}
+
+typedef struct strvec_t {
 	char **strs;
 	int length;
 	int capacity;
-};
+} strvec_t;
 
 strvec_t strvec_create() {
 	strvec_t s;
@@ -24,18 +34,20 @@ int strvec_push(strvec_t* vec, const char* str) {
 	}
 	else if (vec->length + 1 > vec->capacity) {
 		vec->capacity *= 2;
-		vec->strs = realloc(vec->capacity*sizeof(char*));
+		vec->strs = realloc(vec->strs, vec->capacity*sizeof(char*));
 		vec->length += 1;
 	}
 
-	strs[vec->length - 1] = strdup(str);
+	vec->strs[vec->length - 1] = strdup(str);
+
+	return 1;
 }
 
-struct kstate_t {
-	int numeric_seed;
+typedef struct kstate_t {
+	unsigned int numeric_seed;
 	int LaTeX_output;
 	int rules_apply;
-};
+} kstate_t;
 
 struct meter_t {
 
@@ -67,11 +79,11 @@ char vc_map(char c) {
 // (sprint.teri).[84]
 
 
-struct syl_t {
+typedef struct syl_t {
 	char *chars;
 	long length;
 	char length_class;
-};
+} syl_t;
 
 syl_t syl_create(const char* syl, char length_class) {
 	syl_t s;
@@ -82,11 +94,11 @@ syl_t syl_create(const char* syl, char length_class) {
 	return s;
 }
 
-struct sylvec_t {
+typedef struct sylvec_t {
 	syl_t *syllables;
 	long length;
 	size_t capacity;
-};
+} sylvec_t;
 
 sylvec_t sylvec_create() {
 	sylvec_t s;
@@ -97,34 +109,49 @@ sylvec_t sylvec_create() {
 
 int sylvec_contains(sylvec_t *s, const char *str) {
 	for (int i = 0; i < s->length; ++i) {
-		if (strcmp(s->syllables[i], str) == 0) return 1;
+		if (strcmp(s->syllables[i].chars, str) == 0) return 1;
 	}
 
 	return 0;
 }
 
 char *string_concat(const char* str1, const char* str2) {
-	size_t s1 = strlen(str1);
-	size_t s2 = strlen(str2);
+	size_t l1 = strlen(str1);
+	size_t l2 = strlen(str2);
 
-	char *buf = malloc(s1 + s2 + 1);
+	char *buf = malloc(l1 + l2 + 1);
 
-	strcat(buf, s1);
-	strcat(buf, s2);
+	strcat(buf, str1);
+	strcat(buf, str2);
 
 	return buf;
 
 }
 
+char *string_concat_with_delim(const char* str1, const char* str2, const char* delim_between) {
+	size_t l1 = strlen(str1);
+	size_t l2 = strlen(str2);
+	size_t ld = strlen(delim_between);
+
+	char *buf = malloc(l1 + l2 + ld + 1);
+
+	strcat(buf, str1);
+	strcat(buf, delim_between);
+	strcat(buf, str2);
+
+	return buf;
+}
+
+
 int sylvec_push(sylvec_t *s, const syl_t *syl) {
 	if (s->length < 1) {
 		s->capacity = 2;
-		s->strs = malloc(s->capacity*sizeof(syl_t));
+		s->syllables = malloc(s->capacity*sizeof(syl_t));
 		s->length = 1;
 	}
 	else if (s->length + 1 > s->capacity) {
 		s->capacity *= 2;
-		s->strs = realloc(s->capacity*sizeof(syl_t));
+		s->syllables = realloc(s->syllables, s->capacity*sizeof(syl_t));
 		s->length += 1;
 	}
 
@@ -161,11 +188,11 @@ char *sylvec_get_word(sylvec_t *s) {
 	return buf;
 }
 
-struct word_t {
+typedef struct word_t {
 	char *chars;
 	long length;
 	sylvec_t syllables;
-}
+} word_t;
 
 void word_syllabify(word_t *w);
 
@@ -180,12 +207,13 @@ word_t word_create(const char* chars) {
 
 int word_push_syllable(word_t *w, const syl_t *s) {
 	sylvec_push(&w->syllables, s);
+	return 1;
 }
 
-struct dict_t {
+typedef struct dict_t {
 	word_t *words;
 	long num_words;
-};
+} dict_t;
 
 dict_t dict_create(word_t *words, long num_words) {
 	dict_t d;
@@ -195,10 +223,10 @@ dict_t dict_create(word_t *words, long num_words) {
 	return d;
 }
 
-struct foot_t {
+typedef struct foot_t {
     char **spats; // "syllable patterns" :D
     long num_spats;
-}
+} foot_t;
 
 char *clean_string(const char* data) {
 	char *dup = strdup(data);
@@ -214,39 +242,39 @@ char *clean_string(const char* data) {
 	return dup;
 }
 
-struct vcp_t {
+typedef struct vcp_t {
 	const char* pat;
 	char length_class;
-};
+} vcp_t;
 
 
-static const VC_PATTERNS[] = {
-    vcp_t {"V", '1'},
-    vcp_t {"VC",'1'},
-    vcp_t {"VV", '2' },
-    vcp_t {"VVC", '2' },
-    vcp_t {"VCC", '1' },
-    vcp_t {"CV", '1' },
-    vcp_t {"CVC", '1' },
-    vcp_t {"CVV", '2' },
-    vcp_t {"CVVC", '2' },
-    vcp_t {"CVCC", '1' },
-    vcp_t {"CCV", '1' },
-    vcp_t {"CCVC", '1' },
-    vcp_t {"CCVV", '2' },
-    vcp_t {"CCVVC", '2' },
-    vcp_t {"CCVCC", '1' },
-    vcp_t {"CCCVC", '1' },
-    vcp_t {"CCCVCC", '1' }
-    vcp_t {NULL, '0'},
+static const vcp_t VC_PATTERNS[] = {
+    {"V", '1'},
+    {"VC",'1'},
+    {"VV", '2' },
+    {"VVC", '2' },
+    {"VCC", '1' },
+    {"CV", '1' },
+    {"CVC", '1' },
+    {"CVV", '2' },
+    {"CVVC", '2' },
+    {"CVCC", '1' },
+    {"CCV", '1' },
+    {"CCVC", '1' },
+    {"CCVV", '2' },
+    {"CCVVC", '2' },
+    {"CCVCC", '1' },
+    {"CCCVC", '1' },
+    {"CCCVCC", '1' },
+    { NULL, '0'}
 };
 
 vcp_t *find_longest_vc_match(const char* vc, long offset) {
 	static const vcp_t error_pat = {"", '0'};
 
-	vcp_t *longest = &error_pat;
+	const vcp_t *longest = &error_pat;
 	long vclen = strlen(vc);
-	vcp_t *current = &VC_PATTERNS[0];
+	const vcp_t *current = &VC_PATTERNS[0];
 	while (current->pat != NULL) {
 	
 //		let mut full_match = true;
@@ -292,7 +320,7 @@ vcp_t *find_longest_vc_match(const char* vc, long offset) {
 //				//    println!("new longest matching pattern: for {} -> {}", &vc[offset..], p);
 //				}
 
-				if (full_match && strlen(longest.pat) < plen) {
+				if (full_match && strlen(longest->pat) < plen) {
 					longest = p;
 				}
 			}
@@ -619,7 +647,7 @@ word_t *construct_word_list(const char* buf, long num_words) {
 
 }
 
-dictionary_t read_file_to_words(const char* filename) {
+dict_t read_file_to_words(const char* filename) {
 	FILE *fp = fopen(filename, "r");
 	
 	if (!fp) {
@@ -679,12 +707,12 @@ dictionary_t read_file_to_words(const char* filename) {
 //    return syllables;
 //}
 
-sylvec_t compile_list_of_syllables(word_t *words, long num_words) {
+sylvec_t compile_list_of_syllables(dict_t *dict) {
 	sylvec_t s;
 	memset(&s, 0, sizeof(s));
 
-	for (long i = 0; i < num_words; ++i) {
-		sylvec_push_slice(&s, words[i]->syllables);
+	for (long i = 0; i < dict->num_words; ++i) {
+		sylvec_push_slice(&s, dict->words[i]->syllables);
 	}
 
 	return s;
@@ -781,10 +809,10 @@ int get_vowel_harmony_state(const char* syllable) {
 //	return num;
 //}
 
-int get_num_trailing_vowels(const word_t *word) {
+int get_num_trailing_vowels(const char *word) {
 	int num = 0;
-
-	while (vc_map(word->chars[word->length - num - 1]) == 'V' && num < word->length) ++num;
+	size_t len = strlen(word);
+	while (vc_map(word[len-num-1]) == 'V' && num < len) ++num;
 
 	return num;
 
@@ -807,9 +835,10 @@ int get_num_trailing_vowels(const word_t *word) {
 //	return num;
 //}
 
-int get_num_beginning_vowels(const word_t *word) {
+int get_num_beginning_vowels(const char *word) {
 	int num = 0;
-	while (vc_map(word->chars[num]) == 'V' && num < word->length) ++num;
+	size_t len = strlen(word);
+	while (vc_map(word[num]) == 'V' && num < length) ++num;
 
 	return num;
 }
@@ -827,10 +856,10 @@ int get_num_beginning_vowels(const word_t *word) {
 //}
 
 char get_first_consonant(const char *str) {
-	int i = 0;
 	size_t len = strlen(str);
-	while (vc_map(word->chars[i]) != 'C' && num < len) ++i;
-	if (num == len) return '\0';
+	int i = 0;
+	while (vc_map(str[i]) != 'C' && num < len) ++i;
+	if (i == len) return '\0';
 	else return str[i];
 }
 
@@ -882,7 +911,7 @@ bool ends_in_wrong_vowelcombo(const char *str) {
 }
 
 //fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
-char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_apply) {
+char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
 	char new_word[256]; // should be enough :D
 	memset(new_word, 0, sizeof(new_word));
@@ -931,7 +960,7 @@ char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_a
 				else if (n > 0 && strlen(syl) < 2) {
 					goto new_syllable;
 				}
-				else if (sylvec_contains(new_syllables, syl)) {
+				else if (sylvec_contains(&new_syllables, syl)) {
 					goto new_syllable;
 				}
 				else if (has_forbidden_ccombos(concatd)) {
@@ -953,7 +982,7 @@ char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_a
 				}
 
 				new_syllable:
-					syl = get_random_syllable_any(&word_list, rng, ignore_last);
+					syl = get_random_syllable_any(&dict, ignore_last);
 
 				free(concatd);
 			
@@ -967,7 +996,7 @@ char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_a
 			}
 		}
 
-		sylvec_push(syl);
+		sylvec_push(&new_syllables, syl);
 		strcat(new_word, syl);
 
 	}
@@ -1079,7 +1108,7 @@ char *construct_random_word(dictionary_t *dict, long max_syllables, bool rules_a
 
 syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
-	return w->syllables[r];	
+	return &w->syllables.syllables[r];	
 }
 
 //fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_last: bool) -> String {
@@ -1096,9 +1125,9 @@ syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 //	return syl;
 //}
 
-char *get_random_syllable_any(dict_t *d, bool ignore_last) {
+char *get_random_syllable_any(dict_t *dict, bool ignore_last) {
 	word_t *w = get_random_word(dict);
-	while (w->syllables.length = 1) {
+	while (w->syllables.length == 1) {
 		w = get_random_word(dict);
 	}
 
@@ -1114,7 +1143,7 @@ char *get_random_syllable_any(dict_t *d, bool ignore_last) {
 //}
 
 syl_t *get_random_syllable(sylvec_t *sv) {
-	return sv->syllables[get_random(0, sv->length - 1)];
+	return &sv->syllables[get_random(0, sv->length - 1)];
 }
 
 //fn get_syllable_with_lclass(syllables: &Vec<syl_t>, rng: &mut StdRng, length_class: char) -> String {
@@ -1136,12 +1165,12 @@ syl_t *get_random_syllable(sylvec_t *sv) {
 //}
 
 syl_t *get_syllable_with_lclass(sylvec_t *sv, char length_class) {
-	return sv->syllables[0]; // TODO
+	return &sv->syllables[0]; // TODO
 }
 
 
 //fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t, foot: &str) -> String {
-char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, char *foot) {
+char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, foot_t *foot) {
 //	let mut new_verse = String::new();
 	char new_verse[2048];
 	memset(new_verse, 0, sizeof(new_verse));
@@ -1178,7 +1207,7 @@ char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstat
 			else if (r < 0.15) {
 				strcat(new_verse, ",");
 		
-			} else if r < 0.18 {
+			} else if (r < 0.18) {
 				strcat(new_verse, ":");
 			}
 
@@ -1217,238 +1246,279 @@ char *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 
 //    let mut foot: foot_t = foot_t { spats: Vec::new() };
 
-
 //    let syllables = compile_list_of_syllables(word_list);
     	sylvec_t s = compile_list_of_syllables(dict);
 
-    foot.spats.push("211-21-2-221".to_string());
-    foot.spats.push("21-2-21-2-22".to_string());
-    foot.spats.push("2-111-12-121".to_string());
-    foot.spats.push("122-112-2".to_string());
+//    foot.spats.push("211-21-2-221".to_string());
+//   foot.spats.push("21-2-21-2-22".to_string());
+//  foot.spats.push("2-111-12-121".to_string());
+// foot.spats.push("122-112-2".to_string());
 	
-    for f in foot.spats {
-		new_stanza.push('\n');
-		let new_verse = generate_verse_with_foot(&syllables, rng, state, &f);
+//    for f in foot.spats {
+    for (int i = 0; i < num_verses; ++i) {
+//		new_stanza.push('\n');
+		strcat(new_stanza, "\n");
+//		let new_verse = generate_verse_with_foot(&syllables, rng, state, &f);
+		char *new_verse = generate_random_verse(&s, 4, false, state, NULL);
+		strcat(new_stanza, new_verse);
 
-		new_stanza.push_str(&new_verse);
-
-		if state.LaTeX_output {
-			new_stanza.push_str(" \\\\");
+		if (state->LaTeX_output) {
+			strcat(new_stanza, " \\\\");
 		}
 
+		free(new_verse);
 		i = i + 1;
 	}
 
-	if state.LaTeX_output { 
-		new_stanza.push_str("!\n\n");
+	if (state->LaTeX_output) { 
+		strcat(new_stanza, "!\n\n");
 	}
 
-	return new_stanza;
+	return strdup(new_stanza);
 
 }
 
-fn capitalize_first(word: &str) -> String {
+//fn capitalize_first(word: &str) -> String {
+//
+//    let mut v: Vec<char> = word.chars().collect();
+//    v[0] = v[0].to_uppercase().nth(0).unwrap();
+//    let s2: String = v.into_iter().collect();
+//    let s3 = &s2;
+//
+//    return s3.to_string();
+//
+//}
 
-    let mut v: Vec<char> = word.chars().collect();
-    v[0] = v[0].to_uppercase().nth(0).unwrap();
-    let s2: String = v.into_iter().collect();
-    let s3 = &s2;
-
-    return s3.to_string();
-
+char *capitalize_first_nodup(char *str) {
+	str[0] = toupper(str[0]);
+	return str;
 }
 
+char *capitalize_first_dup(char *str) {
+	char *dup = strdup(str);
+	dup[0] = toupper(dup[0]);
 
-fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &kstate_t) -> String {
+	return dup;
+}
+//fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &kstate_t) -> String {
+char *generate_poem(dict_t *dict, kstate_t *state) {
 
-    let distr = generate_distribution_low(1, 3);
+//    let distr = generate_distribution_low(1, 3);
+ //   let num_words_title = get_random_with_distribution(rng, &distr);
+	int num_words_title = 4;
+//    let max_syllables = 4;
+	int max_syllables = 4;
 
-    let num_words_title = get_random_with_distribution(rng, &distr);
+//    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables, state.rules_apply));
+	char *title = capitalize_first_nodup(construct_random_word(dict, max_syllables, state->rules_apply));
 
-    let max_syllables = 4;
-
-    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables, state.rules_apply));
-
-    for i in 1..num_words_title {
-	    title = title + " " + &construct_random_word(word_database, rng, max_syllables, state.rules_apply);
+    for (int i = 1; i < num_words_title; ++i) {
+	    // crap
+	    char *new_title = string_concat_with_delim(title, construct_random_word(dict, max_syllables, state->rules_apply), " ");
+	    free(title);
+	    title = new_title;
     }
 
-    let mut poem = String::new();
+//    let mut poem = String::new();
+    char poem[8096];
+    memset(poem, 0, sizeof(poem));
 
-    if state.LaTeX_output {
-	    poem.push_str(&format!("\\poemtitle{{{}}}\n", title));
-	    poem.push_str(&format!("\\settowidth{{\\versewidth}}{{{}}}\n", "levaton, sitän kylpää ranjoskan asdf"));
-	    poem.push_str("\\begin{verse}[\\versewidth]\n");
+    if (state->LaTeX_output) {
+		strcat(poem, "\\poemtitle{");
+		strcat(poem, title);
+		strcat(poem, "}\n");
+		strcat(poem, "\\settowidth{\\versewidth}{levaton, sitän kylpää ranjoskan asdf}\n");
+	    	strcat(poem, "\\begin{verse}[\\versewidth]\n");
     } else {
-	    poem.push_str(&format!("{}\n", &title));
+	    strcat(poem, title);
     }
 
-    let num_stanzas = get_random(rng, 1, 2); 
-    let mut i = 0;
+//    let num_stanzas = get_random(rng, 1, 2); 
+    int num_stanzas = 3;
     
-    while i < num_stanzas {
+    for (int i = 0; i < num_stanzas; ++i) {
 
-	let distr = generate_distribution_mid(1, 6);
-    	let num_verses = get_random_with_distribution(rng, &distr);
-	let new_stanza = generate_random_stanza(word_database, rng, num_verses, state);
+//	let distr = generate_distribution_mid(1, 6);
+//    	let num_verses = get_random_with_distribution(rng, &distr);
+	int num_verses = 2;
 
-	poem.push_str(&format!("{}\n", new_stanza));
+//	let new_stanza = generate_random_stanza(word_database, rng, num_verses, state);
+	char *new_stanza = generate_random_stanza(dict, num_verses, state);
 
-	i = i + 1;
-
+//	poem.push_str(&format!("{}\n", new_stanza));
+	strcat(poem, new_stanza);
+	free(new_stanza);
     }
 
-    if state.LaTeX_output {
-	    poem.push_str("\\end{verse}\n");
-	    poem.push_str("\\newpage\n");
+    if (state->LaTeX_output) {
+	    strcat(poem, "\\end{verse}\n");
+	    strcat(poem, "\\newpage\n");
     }
 
-    return poem;
+    return strdup(poem);
 }
 
-static LATEX_PREAMBLE: &'static str = 
+static const char *LATEX_PREAMBLE = 
+"\\documentclass[12pt, a4paper]{article}\n"
+"\\usepackage{verse}\n"
+"\\usepackage[utf8]{inputenc}\n"
+"\\usepackage[T1]{fontenc} \n"
+"\\usepackage{palatino} \n"
+"\\usepackage[object=vectorian]{pgfornament} %%  http://altermundus.com/pages/tkz/ornament/index.html\n"
+"\\setlength{\\parindent}{0pt} \n"
+"\\renewcommand{\\poemtitlefont}{\normalfont\\bfseries\\large\\centering} \n"
+"\\setlength{\\stanzaskip}{0.75\\baselineskip} \n"
+"\newcommand{\\sectionlinetwo}[2]{%\n"
+"\nointerlineskip \\vspace{.5\\baselineskip}\\hspace{\\fill}\n"
+"{\\pgfornament[width=0.5\\linewidth, color = #1]{#2}}\n"
+"\\hspace{\\fill}\n"
+"\\par\nointerlineskip \\vspace{.5\\baselineskip}\n"
+"}%\n"
+"\\begin{document}\n";
 
-r#"\documentclass[12pt, a4paper]{article} 
-
-\usepackage{verse}
-
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc} 
-\usepackage{palatino} 
-
-\usepackage[object=vectorian]{pgfornament} %%  http://altermundus.com/pages/tkz/ornament/index.html
-
-\setlength{\parindent}{0pt} 
-\renewcommand{\poemtitlefont}{\normalfont\bfseries\large\centering} 
-
-\setlength{\stanzaskip}{0.75\baselineskip} 
-
-\newcommand{\sectionlinetwo}[2]{%
-\nointerlineskip \vspace{.5\baselineskip}\hspace{\fill}
-{\pgfornament[width=0.5\linewidth, color = #1]{#2}}
-\hspace{\fill}
-\par\nointerlineskip \vspace{.5\baselineskip}
-}%
-\begin{document}
-"#;
-
-fn latex_print_preamble() {
-	println!("{}", LATEX_PREAMBLE);
+void print_latex_preamble() {
+	printf("%s", LATEX_PREAMBLE);
 }
 
-fn latex_print_title_page(poet: &str) {
-	println!(
+void print_latex_title_page(const char* poetname) {
 
-"\\begin{{titlepage}}
-\\centering
-{{\\fontsize{{45}}{{50}}\\selectfont {} \\par}}
-\\vspace{{4cm}}
-\\sectionlinetwo{{black}}{{7}}
-\\vspace{{5cm}}
-{{\\fontsize{{35}}{{60}}\\selectfont \\itshape Runoja\\par}}
-\\end{{titlepage}}", 
+	static const char *LATEX_TITLEPAGE_FMT = 
+"\\begin{titlepage}\n"
+"\\centering\n"
+"{\\fontsize{45}{50}\\selectfont %s \\par}\n"
+"\\vspace{4cm}\n"
+"\\sectionlinetwo{black}{7}\n"
+"\\vspace{5cm}\n"
+"{\\fontsize{35}{60}\\selectfont \\itshape Runoja\\par}\n"
+"\\end{titlepage}";
 
-	poet);
+	printf(LATEX_TITLEPAGE_FMT, poetname);
 
 }
 
-fn print_as_latex_document(poems: &Vec<String>, poetname: &str) {
-	latex_print_preamble();
-	latex_print_title_page(poetname);
-
-	for p in poems {
-		println!("{}", p);
-	}
-
-	println!("\\end{{document}}");
+//fn print_as_latex_document(poems: &Vec<String>, poetname: &str) {
+void print_as_latex_document(const char* poem, const char *poetname) {
+	print_latex_preamble();
+	print_latex_title_page(poetname);
+	printf("%s", poem);
+	printf("\\end{document}");
 
 }
 
-fn generate_random_poetname(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
+//fn generate_random_poetname(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
+char *generate_random_poetname(dict_t *dict) {
 
-	let first_name = capitalize_first(&construct_random_word(word_list, rng, 3, true));
-	let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1, true)).chars().next().unwrap();
-	let surname = capitalize_first(&construct_random_word(word_list, rng, 5, true));
+	char name[128];
+	memset(name, 0, sizeof(name));
 
-	return format!("{} {}. {}", first_name, second_initial, surname);
+//	let first_name = capitalize_first(&construct_random_word(word_list, rng, 3, true));
+	char *first_name = capitalize_first_nodup(construct_random_word(dict, 3, true));
+	//let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1, true)).chars().next().unwrap();
+	char *second_name = capitalize_first_nodup(construct_random_word(dict, 2, true));
+	second_name[1] = '\0';
+
+//	let surname = capitalize_first(&construct_random_word(word_list, rng, 5, true));
+	char *surname = capitalize_first_nodup(construct_random_word(dict, 5, true));
+
+	strcat(name, first_name);
+	strcat(name, " ");
+	strcat(name, second_name);
+	strcat(name, ". ");
+	strcat(name, surname);
+
+	free(first_name);
+	free(second_name);
+	free(surname);
+
+	return strdup(name);
 
 }
 
+//fn main() {
+int main(int argc, char *argv[]) {
 
-fn main() {
+    //let mut source = read_file_to_words("kalevala.txt");
+	dict_t dict = read_file_to_words("kalevala.txt");
 
-//	srand(time(NULL));
-
-    let mut stderr = std::io::stderr();
-
-    let mut source = read_file_to_words("kalevala.txt");
-    if source.len() < 1 {
-        source = read_file_to_words("/home/elias/kalemattu/kalevala.txt");
-    }
-    if source.len() < 1 {
-        writeln!(&mut stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!");
-        return;
-    }
-
-
-    let mut args: Vec<_> = env::args().collect();
-
-    let mut state_vars = kstate_t { numeric_seed: false, LaTeX_output: false, rules_apply: true };
-
-    for a in args.iter() {
-	if a == "--latex" {
-		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
-		state_vars.LaTeX_output = true;
-	}
-	else if a == "--numeric" {
-		writeln!(&mut stderr, "\n(info: option --numeric provided, interpreting given seed as base-10 integer)").unwrap();
-		state_vars.numeric_seed = true;
-	}
-	else if a == "--chaos" {
-		writeln!(&mut stderr, "\n(info: option --chaos provided, disabling all filtering rules!)").unwrap();
-		state_vars.rules_apply = false;
-	}
-    }
-
-    // this should remove any arguments beginning with "--"
-    args.retain(|i|i.chars().take(2).collect::<Vec<char>>() != &['-', '-']);
-
-    let s = match args.len() {
-    	2 => { 
-		match state_vars.numeric_seed {
-			true => args[1].parse::<usize>().unwrap(),
-
-			false =>  {
-				writeln!(&mut stderr, "\n(info: option --numeric not provided, hashing string \"{}\" to be used as seed.)", args[1]).unwrap();
-				let mut hasher = SipHasher::new();
-				args[1].hash(&mut hasher);
-				hasher.finish() as usize
-			}
-		}
-	},
-
-	_ => time::precise_time_ns() as usize
-    };
-
-
-    let seed: &[_] = &[s,s,s,s];
-
-    let mut rng: StdRng = SeedableRng::from_seed(seed);
-    writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
-
-    let mut poems: Vec<String> = Vec::new();
-
-   if state_vars.LaTeX_output {
-	let mut i = 0;
-	while i < 10 {
-		poems.push(generate_poem(&source, &mut rng, &state_vars));
-		i += 1;
+	if (dict.num_words < 1) {
+		fprintf(stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!\n");
+		return 1;
 	}
 
-	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
+	unsigned int seed = time(NULL);
+	srand(seed);
 
-   } else {
-	println!("{}", generate_poem(&source, &mut rng, &state_vars));
-   }
+//    writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
+	printf("(info: using %u as random seed)\n\n", seed);
+
+	kstate_t state;
+	state.numeric_seed = seed;
+	state.LaTeX_output = 0;
+	state.rules_apply = 1;
+
+//    let mut args: Vec<_> = env::args().collect();
+//
+//    let mut state_vars = kstate_t { numeric_seed: false, LaTeX_output: false, rules_apply: true };
+//
+//    for a in args.iter() {
+//	if a == "--latex" {
+//		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
+//		state_vars.LaTeX_output = true;
+//	}
+//	else if a == "--numeric" {
+//		writeln!(&mut stderr, "\n(info: option --numeric provided, interpreting given seed as base-10 integer)").unwrap();
+//		state_vars.numeric_seed = true;
+//	}
+//	else if a == "--chaos" {
+//		writeln!(&mut stderr, "\n(info: option --chaos provided, disabling all filtering rules!)").unwrap();
+//		state_vars.rules_apply = false;
+//	}
+//    }
+//
+//    // this should remove any arguments beginning with "--"
+//    args.retain(|i|i.chars().take(2).collect::<Vec<char>>() != &['-', '-']);
+//
+//    let s = match args.len() {
+//    	2 => { 
+//		match state_vars.numeric_seed {
+//			true => args[1].parse::<usize>().unwrap(),
+//
+//			false =>  {
+//				writeln!(&mut stderr, "\n(info: option --numeric not provided, hashing string \"{}\" to be used as seed.)", args[1]).unwrap();
+//				let mut hasher = SipHasher::new();
+//				args[1].hash(&mut hasher);
+//				hasher.finish() as usize
+//			}
+//		}
+//	},
+//
+//	_ => time::precise_time_ns() as usize
+//    };
+//
+//
+//    let seed: &[_] = &[s,s,s,s];
+//
+//    let mut rng: StdRng = SeedableRng::from_seed(seed);
+
+
+//    let mut poems: Vec<String> = Vec::new();
+
+//   if state_vars.LaTeX_output {
+//	let mut i = 0;
+//	while i < 10 {
+//		poems.push(generate_poem(&source, &mut rng, &state_vars));
+//		i += 1;
+//	}
+//
+//	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
+//
+//   } else {
+
+//println!("{}", generate_poem(&source, &mut rng, &state_vars));
+	char *poem = generate_poem(&dict, &state);
+
+	printf("%s\n", poem);
+
+	free(poem);
 
 }
