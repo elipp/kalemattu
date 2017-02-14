@@ -6,19 +6,18 @@
 #include <ctype.h>
 #include <stdbool.h>
 
-char *strdup(const char* str) {
-	size_t len = strlen(str);
-	char *r = malloc(len+1);
-	strcpy(r, str);
-
-	return r;
-}
-
 typedef struct strvec_t {
 	char **strs;
 	int length;
 	int capacity;
 } strvec_t;
+
+typedef struct vcp_t {
+	const char* pattern;
+	char length_class;
+} vcp_t;
+
+const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
 strvec_t strvec_create() {
 	strvec_t s;
@@ -77,6 +76,50 @@ char vc_map(char c) {
 // CCVV (kruu.nu), CCVVC (staat.tinen) ja CCVCC (prons.si). Harvinaisempia ovat
 // kolmella konsonantilla alkavat CCCV (stra.tegia), CCCVC (stres.si) ja CCCVCC
 // (sprint.teri).[84]
+
+char *get_substring(const char* input, size_t offset, size_t n) {
+	size_t len = strlen(input);
+	char *r = malloc((len-offset) + n + 1);
+	strncpy(r, input + offset, n);
+	return r;
+}
+
+//fn get_vc_pattern(word: &str) -> String {
+//	let mut p = String::new();
+//	for c in word.chars() { p.push(vc_map(c)); }
+//	return p;
+//}
+
+char *get_vc_pattern(const char* input) {
+	size_t len = strlen(input);
+	char *vc = malloc(len + 1);
+	for (int i = 0; i < len; ++i) {
+		vc[i] = vc_map(input[i]);
+	}
+	return vc;
+}
+
+//fn get_vc_pattern_grep(word: &str) -> String {
+//	let mut p = String::new();
+
+//	p.push('^');
+//	p.push_str(&get_vc_pattern(word));
+//	p.push('$');
+
+//	return p;
+
+//}
+
+char *get_vc_pattern_grep(const char* input) {
+	size_t len = strlen(input);
+	char *vc = malloc(len+1 + 2);
+	vc[0] = '^';
+	strncpy(vc + 1, input, len);
+	vc[len] = '$';
+	vc[len+1] = '\0';
+
+	return vc;
+}
 
 
 typedef struct syl_t {
@@ -143,7 +186,7 @@ char *string_concat_with_delim(const char* str1, const char* str2, const char* d
 }
 
 
-int sylvec_push(sylvec_t *s, const syl_t *syl) {
+int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
 	if (s->length < 1) {
 		s->capacity = 2;
 		s->syllables = malloc(s->capacity*sizeof(syl_t));
@@ -161,9 +204,32 @@ int sylvec_push(sylvec_t *s, const syl_t *syl) {
 
 }
 
+int sylvec_pushstr(sylvec_t *s, const char *syl) {
+	if (s->length < 1) {
+		s->capacity = 2;
+		s->syllables = malloc(s->capacity*sizeof(syl_t));
+		s->length = 1;
+	}
+	else if (s->length + 1 > s->capacity) {
+		s->capacity *= 2;
+		s->syllables = realloc(s->syllables, s->capacity*sizeof(syl_t));
+		s->length += 1;
+	}
+
+	char *vc = get_vc_pattern(syl);
+	const vcp_t *L = find_longest_vc_match(vc, 0);
+	free(vc);
+	syl_t new_syl = syl_create(syl, L->length_class);
+	s->syllables[s->length - 1] = new_syl;
+
+	return 1;
+
+}
+
+
 int sylvec_push_slice(sylvec_t *s, const sylvec_t *in) {
 	for (long i = 0; i < in->length; ++i) {
-		sylvec_push(s, &in->syllables[i]);
+		sylvec_pushsyl(s, &in->syllables[i]);
 	}
 
 	return 1;
@@ -205,8 +271,8 @@ word_t word_create(const char* chars) {
 	return w;
 }
 
-int word_push_syllable(word_t *w, const syl_t *s) {
-	sylvec_push(&w->syllables, s);
+int word_push_syllable(word_t *w, const char *s) {
+	sylvec_pushstr(&w->syllables, s);
 	return 1;
 }
 
@@ -242,11 +308,6 @@ char *clean_string(const char* data) {
 	return dup;
 }
 
-typedef struct vcp_t {
-	const char* pat;
-	char length_class;
-} vcp_t;
-
 
 static const vcp_t VC_PATTERNS[] = {
     {"V", '1'},
@@ -269,22 +330,19 @@ static const vcp_t VC_PATTERNS[] = {
     { NULL, '0'}
 };
 
-vcp_t *find_longest_vc_match(const char* vc, long offset) {
+const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 	static const vcp_t error_pat = {"", '0'};
 
 	const vcp_t *longest = &error_pat;
 	long vclen = strlen(vc);
 	const vcp_t *current = &VC_PATTERNS[0];
-	while (current->pat != NULL) {
+	while (current->pattern != NULL) {
 	
 //		let mut full_match = true;
 		bool full_match = true;
-//		let mut i = offset;
-		size_t i = offset;
-//		let &pat = &p.P;
 		
 		//let plen = pat.chars().count();
-		size_t plen = strlen(current->pat);
+		size_t plen = strlen(current->pattern);
 
 		if ((vclen - offset) >= plen) {
 //			for c in pat.chars() {
@@ -294,7 +352,7 @@ vcp_t *find_longest_vc_match(const char* vc, long offset) {
 //				}
 //				i = i+1;
 //			}
-			if (strncmp(current->pat, vc, plen) == 0) {
+			if (strncmp(current->pattern, vc, plen) == 0) {
 				full_match = false;
 			}
 
@@ -307,9 +365,9 @@ vcp_t *find_longest_vc_match(const char* vc, long offset) {
 //							full_match = false;
 //						}
 //					}
-					if (current->pat[plen-1] == 'C') {
+					if (current->pattern[plen-1] == 'C') {
 						if (vc[plen+offset] == 'V') {
-							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pat, offset);
+							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
 							full_match = false;
 						}
 					}
@@ -320,8 +378,8 @@ vcp_t *find_longest_vc_match(const char* vc, long offset) {
 //				//    println!("new longest matching pattern: for {} -> {}", &vc[offset..], p);
 //				}
 
-				if (full_match && strlen(longest->pat) < plen) {
-					longest = p;
+				if (full_match && strlen(longest->pattern) < plen) {
+					longest = current;
 				}
 			}
 		}
@@ -346,48 +404,6 @@ vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 //    return s;
 //}
-
-char *get_substring(const char* input, size_t offset, size_t n) {
-	size_t len = strlen(input);
-	char *r = malloc((len-offset) + n + 1);
-	strncpy(r, input + offset, n);
-	return r;
-}
-
-//fn get_vc_pattern(word: &str) -> String {
-//	let mut p = String::new();
-//	for c in word.chars() { p.push(vc_map(c)); }
-//	return p;
-//}
-
-char *get_vc_pattern(const char* input) {
-	size_t len = strlen(input);
-	char *vc = malloc(len + 1);
-	for (int i = 0; i < len; ++i) {
-		vc[i] = vc_map(input[i]);
-	}
-	return vc;
-}
-
-//fn get_vc_pattern_grep(word: &str) -> String {
-//	let mut p = String::new();
-
-//	p.push('^');
-//	p.push_str(&get_vc_pattern(word));
-//	p.push('$');
-
-//	return p;
-
-//}
-
-char *get_vc_pattern_grep(const char* input) {
-	size_t len = strlen(input);
-	char *vc = malloc(len+1 + 2);
-	vc[0] = '^';
-	strncpy(vc + 1, input, len);
-	vc[len] = '$';
-	vc[len+1] = '\0';
-}
 
 static const char* DIPHTHONGS[] = {
 "yi", "öi", "äi", "ui", "oi",
@@ -511,12 +527,12 @@ static const char FORBIDDEN_ENDCONSONANTS[] = {
 //
 
 bool has_forbidden_endconsonant(const char *input) {
-	const char *c = &FORBIDDEN_ENDCONSONANTS[0];
 	char l = input[strlen(input)-1];
 	size_t i = 0;
 
 	while (i < sizeof(FORBIDDEN_ENDCONSONANTS)) {
 		if (l == FORBIDDEN_ENDCONSONANTS[i]) { return true; }
+		++i;
 	}
 
 	return false;
@@ -541,11 +557,11 @@ void word_syllabify(word_t *word) {
 	size_t vc_len = strlen(vc_pattern);
 
 //    while offset < vclen {
-	while (offset < vclen) {
+	while (offset < vc_len) {
 //    	let longest = find_longest_vc_match(&vc_pattern, offset);
-		vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
+		const vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
 		//let &pat = &longest.P;
-		char *pat = longest->pattern;
+		const char *pat = longest->pattern;
 		//let plen = pat.chars().count();
 		size_t plen = strlen(longest->pattern);
 
@@ -556,42 +572,28 @@ void word_syllabify(word_t *word) {
 		}
 
 		else {
-		//    let new_syl = get_substring(&word.chars, offset, plen);
+			//    let new_syl = get_substring(&word.chars, offset, plen);
 			char *new_syl = get_substring(word->chars, offset, plen);
-		
-			    if (offset > 0 && str_contains(pat, "VV") && !has_diphthong(&new_syl) && !has_double_vowel(&new_syl)) {
-			// need to split this syllable into two
-//			let vv_offset = pat.find("VV").unwrap();
-				    size_t vv_offset = strstr(pat, "VV") - pat;
-//			let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
-				    char *p1 = get_substring(word->chars, offset, vv_offset + 1);
-//			let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, plen - new_syl_split1.chars().count());
-				    char *p2 = get_substring(word->chars, offset+vv_offset+1, plen - strlen(new_syl_split1));
 
-			//println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
-
-	//		let vc1 = get_vc_pattern(&new_syl_split1);
-			char *vc1 = get_vc_pattern(p1);
-			//let L1 = find_longest_vc_match(&vc1, 0);
-			vcp_t *l1 = find_longest_vc_match(vc1, 0);
-
-//			let vc2 = get_vc_pattern(&new_syl_split2);
-			char *vc2 = get_vc_pattern(p2);
-//			let L2 = find_longest_vc_match(&vc1, 0); // lol this was a bug actually
-			vcp_t *l2 = find_longest_vc_match(vc2, 0);
-
-			//word.syllables.push(syl_t{chars: new_syl_split1, length_class: L1.L});
-			word_push_syllable(&word, syl_create(vc1, l1->length_class));
-			//word.syllables.push(syl_t{chars: new_syl_split2, length_class: L2.L});
-			word_push_syllable(&word, syl_create(vc2, l2->length_class));
+			if (offset > 0 && str_contains(pat, "VV") && !has_diphthong(new_syl) && !has_double_vowel(new_syl)) {
+				// need to split this syllable into two
+				//			let vv_offset = pat.find("VV").unwrap();
+				size_t vv_offset = strstr(pat, "VV") - pat;
+				//			let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
+				char *p1 = get_substring(word->chars, offset, vv_offset + 1);
+				//			let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, plen - new_syl_split1.chars().count());
+				char *p2 = get_substring(word->chars, offset+vv_offset+1, plen - strlen(p1));
 
 
+				//println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
+				word_push_syllable(word, p1);
+				word_push_syllable(word, p2);
 
 
-		    } else {
-//			word.syllables.push(syl_t{chars: new_syl, length_class: longest.L});
-			word_push_syllable(&word, syl_create(new_syl, longest->length_class));
-		    }
+			} else {
+				//			word.syllables.push(syl_t{chars: new_syl, length_class: longest.L});
+				word_push_syllable(word, new_syl);
+			}
 		}
 		
         offset = offset + plen;
@@ -609,14 +611,17 @@ static long get_filesize(FILE *fp) {
 
 static long word_count(const char* buf) {
 
+	char *bufdup = strdup(buf);
 	char *endptr;
-	char *token = strtok_r(buf, " ", &endptr);
+	char *token = strtok_r(bufdup, " ", &endptr);
 	long num_words = 0;
 
 	while (token) {
 		++num_words;
 		token = strtok_r(NULL, " ", &endptr);
 	}
+
+	free(bufdup);
 	
 	return num_words;
 }
@@ -633,14 +638,15 @@ word_t *construct_word_list(const char* buf, long num_words) {
 
 	word_t *words = malloc(num_words * sizeof(word_t));
 
+	char *bufdup = strdup(buf);
 	char *endptr;
-	char *token = strtok_r(buf, " ", &endptr);
-	long num_words = 0;
+	char *token = strtok_r(bufdup, " ", &endptr);
+	long i = 0;
 
 	while (token) {
 		token = strtok_r(NULL, " ", &endptr);
-		words[num_words] = word_create(token);
-		++num_words;
+		words[i] = word_create(token);
+		++i;
 	}
 	
 	return words;
@@ -648,11 +654,13 @@ word_t *construct_word_list(const char* buf, long num_words) {
 }
 
 dict_t read_file_to_words(const char* filename) {
+	dict_t d;
+	memset(&d, 0, sizeof(d));
+
 	FILE *fp = fopen(filename, "r");
-	
+
 	if (!fp) {
 		fprintf(stderr, "error: Couldn't open file %s\n", filename);
-		return NULL;
 	}
 	char *buf = read_file_to_buffer(fp);
 	fclose(fp);
@@ -661,7 +669,7 @@ dict_t read_file_to_words(const char* filename) {
 	word_t *words = construct_word_list(buf, wc);
 	free(buf);
 
-	dictionary_t d = dict_create(words, wc);
+	d = dict_create(words, wc);
 
 	return d;
 	
@@ -712,7 +720,7 @@ sylvec_t compile_list_of_syllables(dict_t *dict) {
 	memset(&s, 0, sizeof(s));
 
 	for (long i = 0; i < dict->num_words; ++i) {
-		sylvec_push_slice(&s, dict->words[i]->syllables);
+		sylvec_push_slice(&s, &dict->words[i].syllables);
 	}
 
 	return s;
@@ -753,8 +761,8 @@ double get_randomf() {
 //}
 //
 
-word_t *get_random_word(dictionary_t *dict) {
-	return dict->words[get_random(0, dict->num_words)];
+word_t *get_random_word(dict_t *dict) {
+	return &dict->words[get_random(0, dict->num_words)];
 }
 
 
@@ -838,7 +846,7 @@ int get_num_trailing_vowels(const char *word) {
 int get_num_beginning_vowels(const char *word) {
 	int num = 0;
 	size_t len = strlen(word);
-	while (vc_map(word[num]) == 'V' && num < length) ++num;
+	while (vc_map(word[num]) == 'V' && num < len) ++num;
 
 	return num;
 }
@@ -858,7 +866,7 @@ int get_num_beginning_vowels(const char *word) {
 char get_first_consonant(const char *str) {
 	size_t len = strlen(str);
 	int i = 0;
-	while (vc_map(str[i]) != 'C' && num < len) ++i;
+	while (vc_map(str[i]) != 'C' && i < len) ++i;
 	if (i == len) return '\0';
 	else return str[i];
 }
@@ -910,6 +918,22 @@ bool ends_in_wrong_vowelcombo(const char *str) {
 	return false;
 }
 
+syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
+	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
+	return &w->syllables.syllables[r];	
+}
+
+char *get_random_syllable_any(dict_t *dict, bool ignore_last) {
+	word_t *w = get_random_word(dict);
+	while (w->syllables.length == 1) {
+		w = get_random_word(dict);
+	}
+
+	syl_t *s = get_random_syllable_from_word(w, ignore_last);
+
+	return strdup(s->chars);
+}
+
 //fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
 char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
@@ -922,7 +946,7 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 		while (1) {
 			word_t *w = get_random_word(dict);
 			double r = get_randomf();
-			if (w->syllables.length > 1 || w->length <= 4 || r < 0.20 && w->length <= 5) {
+			if (w->syllables.length > 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
 				return strdup(w->chars);
 			}
 		}
@@ -982,7 +1006,7 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 				}
 
 				new_syllable:
-					syl = get_random_syllable_any(&dict, ignore_last);
+					syl = get_random_syllable_any(dict, ignore_last);
 
 				free(concatd);
 			
@@ -996,7 +1020,7 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 			}
 		}
 
-		sylvec_push(&new_syllables, syl);
+		sylvec_pushstr(&new_syllables, syl);
 		strcat(new_word, syl);
 
 	}
@@ -1106,11 +1130,6 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 //	return syl;
 //}
 
-syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
-	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
-	return &w->syllables.syllables[r];	
-}
-
 //fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_last: bool) -> String {
 //	let mut word = get_random_word(word_list, rng);
 //	loop {
@@ -1124,17 +1143,6 @@ syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 //
 //	return syl;
 //}
-
-char *get_random_syllable_any(dict_t *dict, bool ignore_last) {
-	word_t *w = get_random_word(dict);
-	while (w->syllables.length == 1) {
-		w = get_random_word(dict);
-	}
-
-	syl_t *s = get_random_syllable_from_word(w, ignore_last);
-
-	return strdup(s->chars);
-}
 
 
 //fn get_random_syllable<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng) -> &'a syl_t {
@@ -1238,16 +1246,13 @@ char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstat
 //fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &kstate_t) -> String {
 char *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 
-//	let mut new_stanza = String::new();
 	char new_stanza[4096];
 	memset(new_stanza, 0, sizeof(new_stanza));
 //	let mut i = 0;
-	int i = 0;
-
 //    let mut foot: foot_t = foot_t { spats: Vec::new() };
 
 //    let syllables = compile_list_of_syllables(word_list);
-    	sylvec_t s = compile_list_of_syllables(dict);
+//    	sylvec_t s = compile_list_of_syllables(dict);
 
 //    foot.spats.push("211-21-2-221".to_string());
 //   foot.spats.push("21-2-21-2-22".to_string());
@@ -1259,7 +1264,7 @@ char *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 //		new_stanza.push('\n');
 		strcat(new_stanza, "\n");
 //		let new_verse = generate_verse_with_foot(&syllables, rng, state, &f);
-		char *new_verse = generate_random_verse(&s, 4, false, state, NULL);
+		char *new_verse = generate_random_verse(dict, 4, false, state, NULL);
 		strcat(new_stanza, new_verse);
 
 		if (state->LaTeX_output) {
