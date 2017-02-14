@@ -6,9 +6,10 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <locale.h>
+#include <wchar.h>
 
 typedef struct strvec_t {
-	char **strs;
+	wchar_t **strs;
 	int length;
 	int capacity;
 } strvec_t;
@@ -26,22 +27,22 @@ strvec_t strvec_create() {
 	return s;
 }
 
-int strvec_push(strvec_t* vec, const char* str) {
+int strvec_push(strvec_t* vec, const wchar_t* str) {
 
 	printf("strvec_push: capacity = %d, length = %d\n", vec->capacity, vec->length);
 
 	if (vec->length < 1) {
 		vec->capacity = 2;
-		vec->strs = malloc(vec->capacity*sizeof(char*));
+		vec->strs = malloc(vec->capacity*sizeof(wchar_t*));
 		vec->length = 1;
 	}
 	else if (vec->length + 1 > vec->capacity) {
 		vec->capacity *= 2;
-		vec->strs = realloc(vec->strs, vec->capacity*sizeof(char*));
+		vec->strs = realloc(vec->strs, vec->capacity*sizeof(wchar_t*));
 		vec->length += 1;
 	}
 
-	vec->strs[vec->length - 1] = strdup(str);
+	vec->strs[vec->length - 1] = wcsdup(str);
 
 	return 1;
 }
@@ -56,18 +57,17 @@ struct meter_t {
 
 };
 
-static const char *vowels = "aeiouyäöå";
+static const wchar_t *vowels = L"aeiouyäöå";
 
-char vc_map(char c) {
+char vc_map(wchar_t c) {
 	if (isalpha(c)) {
-		if (strchr(vowels, c)) {
+		if (wcschr(vowels, c)) {
 			return 'V';
 		}
 		else return 'C';
 	}
 	else return '?';
 }
-
 
 // wikipedia:
 // Suomessa on 10 perustavaa tavutyyppiä, jos konsonanttiyhtymillä alkavia tavuja
@@ -89,8 +89,18 @@ char *get_substring(const char* input, size_t offset, size_t n) {
 	return r;
 }
 
-char *get_vc_pattern(const char* input) {
-	size_t len = strlen(input);
+wchar_t *get_subwstring(const wchar_t *input, size_t offset, size_t n) {
+	size_t len = wcslen(input);
+	wchar_t *r = malloc(((len - offset) + n + 1) * sizeof(wchar_t));
+
+	wmemcpy(r, input + offset, n);
+	r[n] = L'\0';
+
+	return r;
+}
+
+char *get_vc_pattern(const wchar_t* input) {
+	size_t len = wcslen(input);
 	char *vc = malloc(len + 1);
 	for (int i = 0; i < len; ++i) {
 		vc[i] = vc_map(input[i]);
@@ -98,9 +108,11 @@ char *get_vc_pattern(const char* input) {
 
 	vc[len] = '\0';
 
-	printf("get_vc_pattern: input: %s, returning %s\n", input, vc);
+	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
 	return vc;
 }
+
+
 
 //fn get_vc_pattern_grep(word: &str) -> String {
 //	let mut p = String::new();
@@ -113,28 +125,32 @@ char *get_vc_pattern(const char* input) {
 
 //}
 
-char *get_vc_pattern_grep(const char* input) {
-	size_t len = strlen(input);
-	char *vc = malloc(len+1 + 2);
-	vc[0] = '^';
-	strncpy(vc + 1, input, len);
+char *get_vc_pattern_grep(const wchar_t* input) {
+	size_t len = wcslen(input);
+	char *vc = get_vc_pattern(input);
+	char *r = malloc((len + 3)*sizeof(char)); // space for ^ and $ and '\0'
+
+	r[0] = '^';
+	strncpy(r + 1, vc, len);
 	vc[len] = '$';
 	vc[len+1] = '\0';
 
-	return vc;
+	free(vc);
+
+	return r;
 }
 
 
 typedef struct syl_t {
-	char *chars;
+	wchar_t *chars;
 	long length;
 	char length_class;
 } syl_t;
 
-syl_t syl_create(const char* syl, char length_class) {
+syl_t syl_create(const wchar_t* syl, char length_class) {
 	syl_t s;
-	s.chars = strdup(syl);
-	s.length = strlen(syl);
+	s.chars = wcsdup(syl);
+	s.length = wcslen(syl);
 	s.length_class = length_class;
 
 	return s;
@@ -153,9 +169,9 @@ sylvec_t sylvec_create() {
 	return s;
 }
 
-int sylvec_contains(sylvec_t *s, const char *str) {
+int sylvec_contains(sylvec_t *s, const wchar_t *str) {
 	for (int i = 0; i < s->length; ++i) {
-		if (strcmp(s->syllables[i].chars, str) == 0) return 1;
+		if (wcscmp(s->syllables[i].chars, str) == 0) return 1;
 	}
 
 	return 0;
@@ -174,18 +190,28 @@ char *string_concat(const char* str1, const char* str2) {
 
 }
 
-char *string_concat_with_delim(const char* str1, const char* str2, const char* delim_between) {
-	size_t l1 = strlen(str1);
-	size_t l2 = strlen(str2);
-	size_t ld = strlen(delim_between);
+wchar_t *string_wconcat(const wchar_t* str1, const wchar_t* str2) {
 
-	char *buf = malloc(l1 + l2 + ld + 1);
+	size_t l1 = wcslen(str1);
+	size_t l2 = wcslen(str2);
 
-	strcat(buf, str1);
-	strcat(buf, delim_between);
-	strcat(buf, str2);
+	wchar_t *buf = malloc((l1 + l2 + 1)*sizeof(wchar_t));
+
+	wcscat(buf, str1);
+	wcscat(buf, str2);
 
 	return buf;
+
+}
+
+
+char *string_concat_with_delim(const char* str1, const char* str2, const char* delim_between) {
+	// an unnecessary allocation is made but w/e
+	char *first = string_concat(str1, delim_between);
+	char *final = string_concat(first, str2);
+	free(first);
+
+	return final;
 }
 
 
@@ -207,7 +233,7 @@ int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
 
 }
 
-int sylvec_pushstr(sylvec_t *s, const char *syl) {
+int sylvec_pushstr(sylvec_t *s, const wchar_t *syl) {
 
 	printf("sylvec_pushstr: capacity = %lu, length = %lu\n", s->capacity, s->length);
 
@@ -231,44 +257,44 @@ int sylvec_push_slice(sylvec_t *s, const sylvec_t *in) {
 	return 1;
 }
 
-char *sylvec_get_word(sylvec_t *s) {
-	long size = 0;
+wchar_t *sylvec_get_word(sylvec_t *s) {
+	long total_length = 0;
 	for (int i = 0; i < s->length; ++i) {
-		size += s->syllables[i].length;
+		total_length += s->syllables[i].length;
 	}
 
-	char *buf = malloc(size + 1);
+	wchar_t *buf = malloc((total_length + 1)*sizeof(wchar_t));
 	
 	long offset = 0;
 	for (int i = 0; i < s->length; ++i) {
-		strcpy(buf + offset, s->syllables[i].chars);
+		wcscpy(buf + offset, s->syllables[i].chars);
 		offset += s->syllables[i].length;
 	}
 
-	buf[size] = '\0';
+	buf[offset] = L'\0';
 
 	return buf;
 }
 
 typedef struct word_t {
-	char *chars;
+	wchar_t *chars;
 	long length;
 	sylvec_t syllables;
 } word_t;
 
 void word_syllabify(word_t *w);
 
-word_t word_create(const char* chars) {
+word_t word_create(const wchar_t* chars) {
 	word_t w;
-	w.chars = strdup(chars);
-	w.length = strlen(chars);
+	w.chars = wcsdup(chars);
+	w.length = wcslen(chars);
 	w.syllables = sylvec_create();
 	word_syllabify(&w);
 
 	return w;
 }
 
-int word_push_syllable(word_t *w, const char *s) {
+int word_push_syllable(word_t *w, const wchar_t *s) {
 	sylvec_pushstr(&w->syllables, s);
 	return 1;
 }
@@ -307,6 +333,24 @@ char *clean_string(const char* data) {
 	printf("clean_string: data = \"%s\", ret = \"%s\", j = %d\n", data, clean, j);
 	return clean;
 }
+
+wchar_t *clean_wstring(const wchar_t* data) {
+	size_t len = wcslen(data);
+	wchar_t *clean = malloc(len*sizeof(wchar_t)); // this will waste a little bit of memory
+	int i = 0, j = 0;
+	while (i < len) {
+		if (isalpha(data[i])) {
+			clean[j] = tolower(data[i]);
+			++j;
+		}
+		++i;
+	}
+
+	clean[j] = L'\0';
+	printf("clean_string: data = \"%ls\", ret = \"%ls\", j = %d\n", data, clean, j);
+	return clean;
+}
+
 
 
 static const vcp_t VC_PATTERNS[] = {
@@ -376,34 +420,27 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 }
 
 
-static const char* DIPHTHONGS[] = {
-"yi", "öi", "äi", "ui", "oi",
-"ai", "äy", "au", "yö", "öy",
-"uo", "ou", "ie", "ei", "eu",
-"iu", "ey", "iy", NULL
+static const wchar_t* DIPHTHONGS[] = {
+L"yi", L"öi", L"äi", L"ui", L"oi",
+L"ai", L"äy", L"au", L"yö", L"öy",
+L"uo", L"ou", L"ie", L"ei", L"eu",
+L"iu", L"ey", L"iy", NULL
 };
 
-static const char* DOUBLEVOWELS[] = {
-"aa", "ee", "ii", "oo", "uu", "yy", "ää", "öö", NULL
+static const wchar_t* DOUBLEVOWELS[] = {
+ L"aa", L"ee", L"ii", L"oo", L"uu", L"yy", L"ää", L"öö", NULL
 };
 
-static const char* NON_DIPHTHONGS[] = {
-"ae", "ao", "ea", "eo", "ia",
-"io", "iä", "oa", "oe", "ua",
-"ue", "ye", "yä", "äe", "äö",
-"öä", "eä", "iö", "eö", "öe",
-"äa", "aä", "oö", "öo", "yu",
-"uy", "ya", "yu", "äu", "uä",
-"uö", "öu", "öa", "aö", NULL
+static const wchar_t* NON_DIPHTHONGS[] = {
+ L"ae", L"ao", L"ea", L"eo", L"ia",
+ L"io", L"iä", L"oa", L"oe", L"ua",
+ L"ue", L"ye", L"yä", L"äe", L"äö",
+ L"öä", L"eä", L"iö", L"eö", L"öe",
+ L"äa", L"aä", L"oö", L"öo", L"yu",
+ L"uy", L"ya", L"yu", L"äu", L"uä",
+ L"uö", L"öu", L"öa", L"aö", NULL
 };
 
-//fn has_diphthong(syllable: &str) -> bool {
-//        for n in DIPHTHONGS {
-//                if syllable.contains(n) { return true; }
-//        }
-//        return false;
-//}
-//
 bool has_diphthong(const char* syllable) {
 	const char **d = &DIPHTHONGS[0];
 	while (*d) {
@@ -539,15 +576,15 @@ void word_syllabify(word_t *word) {
 
 		else {
 			//    let new_syl = get_substring(&word.chars, offset, plen);
-			char *new_syl = get_substring(word->chars, offset, plen);
+			wchar_t *new_syl = get_subwstring(word->chars, offset, plen);
 
 			if (offset > 0 && str_contains(pat, "VV") && (!has_diphthong(new_syl)) && (!has_double_vowel(new_syl))) {
 				// need to split this syllable into two
 				size_t vv_offset = strstr(pat, "VV") - pat;
 				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
 
-				char *p1 = get_substring(word->chars, offset, vv_offset + 1);
-				char *p2 = get_substring(word->chars, offset+vv_offset+1, plen - strlen(p1));
+				wchar_t *p1 = get_subwstring(word->chars, offset, vv_offset + 1);
+				wchar_t *p2 = get_subwstring(word->chars, offset+vv_offset+1, plen - strlen(p1));
 
 				word_push_syllable(word, p1);
 				word_push_syllable(word, p2);
@@ -574,16 +611,21 @@ static long get_filesize(FILE *fp) {
 	return size;
 }
 
-static long word_count(const char* buf) {
+static long word_count(const wchar_t* buf) {
 
-	char *bufdup = strdup(buf);
-	char *endptr;
-	char *token = strtok_r(bufdup, " ", &endptr);
+	wchar_t *bufdup = wcsdup(buf);
+	wchar_t *endptr;
+
+	printf("%p\n", bufdup);
+
 	long num_words = 0;
+
+	wchar_t *token = wcstok(bufdup, L" ", &endptr);
 
 	while (token) {
 		++num_words;
-		token = strtok_r(NULL, " ", &endptr);
+		token = wcstok(NULL, L" ", &endptr);
+		printf("%ls\n", token);
 	}
 
 	free(bufdup);
@@ -591,36 +633,62 @@ static long word_count(const char* buf) {
 	return num_words;
 }
 
-static char *read_file_to_buffer(FILE *fp) {
-	long filesize = get_filesize(fp);
-	char *buf = malloc(filesize);
-	fread(buf, 1, filesize, fp); 
+static char *read_file_to_buffer(FILE *fp, long *filesize_out) {
 
+	long size = get_filesize(fp);
+	char *buf = malloc(size*sizeof(char));
+	fread(buf, 1, size, fp); 
+
+	if (filesize_out) { *filesize_out = size; }
+	
 	return buf;
 }
 
-word_t *construct_word_list(const char* buf, long num_words) {
+word_t *construct_word_list(const wchar_t* buf, long num_words) {
 
 	word_t *words = malloc(num_words * sizeof(word_t));
 
-	char *bufdup = strdup(buf);
-	char *endptr;
-	char *token = strtok_r(bufdup, " ", &endptr);
+	wchar_t *bufdup = wcsdup(buf);
+	wchar_t *endptr;
+	wchar_t *token = wcstok(bufdup, L" ", &endptr);
 	long i = 0;
 
 	while (token) {
-		char *clean = clean_string(token);
+		wchar_t *clean = clean_string(token);
 		words[i] = word_create(clean);
 		free(clean);
 		++i;
-		token = strtok_r(NULL, " ", &endptr);
+		token = wcstok(NULL, L" ", &endptr);
 	}
 	
 	return words;
 
 }
 
+wchar_t *convert_to_multibyte(const char* arg, long buffer_size) {
+
+	wchar_t *mb = malloc(buffer_size * sizeof(wchar_t)); // will waste some memory though
+
+	mbstate_t state;
+	memset(&state, 0, sizeof(state));
+
+	printf("Using locale %s.\n", setlocale( LC_CTYPE, "" ));
+
+	size_t result;
+	result = mbsrtowcs(mb, &arg, buffer_size, &state);
+
+	if (result == (size_t)-1) {
+	       	fputs("convert_to_multibyte: encoding error :(", stderr);
+		return NULL;
+	}
+
+	return mb;
+}
+
+
+
 dict_t read_file_to_words(const char* filename) {
+
 	dict_t d;
 	memset(&d, 0, sizeof(d));
 
@@ -628,59 +696,26 @@ dict_t read_file_to_words(const char* filename) {
 
 	if (!fp) {
 		fprintf(stderr, "error: Couldn't open file %s\n", filename);
+		return d;
 	}
-	char *buf = read_file_to_buffer(fp);
+
+	long filesize;
+
+	char *buf = read_file_to_buffer(fp, &filesize);
+	wchar_t *buf_mb = convert_to_multibyte(buf, filesize);
+
+	free(buf);
 	fclose(fp);
 
-	long wc = word_count(buf);
-	word_t *words = construct_word_list(buf, wc);
-	free(buf);
+	long wc = word_count(buf_mb);
+	printf("number of words: %ld\n", wc);
+//	word_t *words = construct_word_list(buf, wc);
 
-	d = dict_create(words, wc);
+//	d = dict_create(words, wc);
 
 	return d;
 	
 }
-
-//fn read_file_to_words(filename : &'static str) -> Vec<word_t> {
-//
-//    let mut f = match File::open(filename) {
-//        Ok(file) => file,
-//        Err(e) => {
-//            // fallback in case of failure.
-//            // you could log the error, panic, or do anything else.
-//            // println("Opening file {} failed: {}", filename, e);
-//
-//            return Vec::new();
-//        }
-//    };
-//
-//    let mut s = String::new();
-//    let asd = f.read_to_string(&mut s);
-//
-//    let mut words : Vec<word_t> = Vec::new();
-//
-//    for x in s.split_whitespace() {
-//
-//        let mut w = word_t { chars : clean_string(x), syllables : Vec::new() };
-//
-//        if w.chars != "" {
-//            syllabify(&mut w);
-//            words.push(w);
-//        }
-//
-//    }
-//    return words;
-//}
-
-//fn compile_list_of_syllables(words: &Vec<word_t>) -> Vec<syl_t> {
-//    let mut syllables: Vec<syl_t> = Vec::new();
-//
-//    for w in words {
-//        syllables.extend(w.syllables.clone());
-//    }
-//    return syllables;
-//}
 
 sylvec_t compile_list_of_syllables(dict_t *dict) {
 	sylvec_t s;
@@ -693,13 +728,6 @@ sylvec_t compile_list_of_syllables(dict_t *dict) {
 	return s;
 }
 
-//fn get_random(rng: &mut StdRng, min: usize, max: usize) -> usize {
-//	let k = ((max as f64)*rng.gen::<f64>() + (min as f64)) as usize;
-//
-//	return k;
-//}
-//
-
 long get_random(long min, long max) {
 	return rand() % max + min;
 }
@@ -709,44 +737,9 @@ double get_randomf() {
 }
 
 
-// hardcode these in C 
-
-
-//fn get_random_with_distribution(rng: &mut StdRng, distr: &Vec<usize>) -> usize {
-//
-//	let r = rng.gen::<f64>();
-//	let index = (r * (distr.len() as f64)) as usize;
-//	let R = distr[index];
-//
-//	return R;
-//}
-
-//fn get_random_word<'a>(word_list: &'a Vec<word_t>, mut rng: &mut StdRng) -> &'a word_t {
-//	let word = &word_list[get_random(rng, 0, word_list.len())];
-//
-//	return word;
-//}
-//
-
 word_t *get_random_word(dict_t *dict) {
 	return &dict->words[get_random(0, dict->num_words)];
 }
-
-
-//fn get_vowel_harmony_state(syllable: &str) -> usize {
-//	let mut state: usize = 0;
-//
-//	if syllable.contains('a') || syllable.contains('o') || syllable.contains('u') {
-//		state = state | 0x1;
-//	} 
-//
-//	if syllable.contains('ä') || syllable.contains('ö') || syllable.contains('y') {
-//		state = state | 0x2;
-//	} 
-//
-////	println!("word: \"{}\", returning vharm: {}", syllable, state);
-//	return state;
-//}
 
 static int str_hasanyof(const char* str, const char* chars) {
 	const char *c = &chars[0];
@@ -768,22 +761,6 @@ int get_vowel_harmony_state(const char* syllable) {
 	return state;
 }
 
-//
-//fn get_num_trailing_vowels(word: &str) -> usize {
-//	let mut num = 0;
-//	for c in word.chars().rev() {
-//		if vc_map(c) == 'V' {
-//			num = num+1;
-//		}
-//		else {
-//			break;
-//		}
-//	}
-//
-//
-//	return num;
-//}
-
 int get_num_trailing_vowels(const char *word) {
 	int num = 0;
 	size_t len = strlen(word);
@@ -793,23 +770,6 @@ int get_num_trailing_vowels(const char *word) {
 
 }
 
-//fn get_num_beginning_vowels(word: &str) -> usize {
-//	let mut num = 0;
-//
-//	for c in word.chars() {
-//
-//		if vc_map(c) == 'V' {
-//			num = num+1;
-//		}
-//		else {
-//			break;
-//		}
-//
-//	}
-//
-//	return num;
-//}
-
 int get_num_beginning_vowels(const char *word) {
 	int num = 0;
 	size_t len = strlen(word);
@@ -817,18 +777,6 @@ int get_num_beginning_vowels(const char *word) {
 
 	return num;
 }
-
-//fn get_first_consonant(syl: &str) -> char {
-//
-//	for c in syl.chars() {
-//		if vc_map(c) == 'C' {
-//			return c;
-//		}
-//	}
-//
-//	return '0';
-//
-//}
 
 char get_first_consonant(const char *str) {
 	size_t len = strlen(str);
@@ -838,34 +786,9 @@ char get_first_consonant(const char *str) {
 	else return str[i];
 }
 
-//static FORBIDDEN_VOWELENDINGS: &'static [&'static str] =
-//&["ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu" ];
-
 static const char *FORBIDDEN_VOWELENDINGS[] = {
 "ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu", NULL
 };
-
-//fn ends_in_wrong_vowelcombo(word: &str) -> bool {
-//	let vcp = get_vc_pattern_grep(&word);
-//	if vcp.contains("VV$") {
-//		let mut iter = word.chars().rev();
-//		let last = iter.next().unwrap();
-//		let second_last = iter.next().unwrap();
-//
-//		let mut lasttwo = String::new();
-//		lasttwo.push(second_last);
-//		lasttwo.push(last);
-//
-//		for ed in FORBIDDEN_VOWELENDINGS {
-//			if ed == &lasttwo {
-//				return true;
-//			}
-//
-//		}
-//	}
-//
-//	return false;
-//}
 
 bool ends_in_wrong_vowelcombo(const char *str) {
 	const char* vcp = get_vc_pattern_grep(str);
@@ -1409,7 +1332,7 @@ char *generate_random_poetname(dict_t *dict) {
 
 //fn main() {
 int main(int argc, char *argv[]) {
-	setlocale(LC_ALL, "fi_FI");
+	setlocale(LC_ALL, "fi_FI.UTF-8");
 
 	dict_t dict = read_file_to_words("kalevala.txt");
 
@@ -1429,9 +1352,7 @@ int main(int argc, char *argv[]) {
 	state.rules_apply = 1;
 
 	char *poem = generate_poem(&dict, &state);
-
 	printf("%s\n", poem);
-
 	free(poem);
 
 }
