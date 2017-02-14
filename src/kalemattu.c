@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <locale.h>
+#include <wctype.h>
 #include <wchar.h>
 
 typedef struct strvec_t {
@@ -53,14 +54,14 @@ typedef struct kstate_t {
 	int rules_apply;
 } kstate_t;
 
-struct meter_t {
+//struct meter_t {
 
-};
+//};
 
 static const wchar_t *vowels = L"aeiouyäöå";
 
 char vc_map(wchar_t c) {
-	if (isalpha(c)) {
+	if (iswalpha(c)) {
 		if (wcschr(vowels, c)) {
 			return 'V';
 		}
@@ -111,19 +112,6 @@ char *get_vc_pattern(const wchar_t* input) {
 	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
 	return vc;
 }
-
-
-
-//fn get_vc_pattern_grep(word: &str) -> String {
-//	let mut p = String::new();
-
-//	p.push('^');
-//	p.push_str(&get_vc_pattern(word));
-//	p.push('$');
-
-//	return p;
-
-//}
 
 char *get_vc_pattern_grep(const wchar_t* input) {
 	size_t len = wcslen(input);
@@ -190,7 +178,7 @@ char *string_concat(const char* str1, const char* str2) {
 
 }
 
-wchar_t *string_wconcat(const wchar_t* str1, const wchar_t* str2) {
+wchar_t *wstring_concat(const wchar_t* str1, const wchar_t* str2) {
 
 	size_t l1 = wcslen(str1);
 	size_t l2 = wcslen(str2);
@@ -209,6 +197,15 @@ char *string_concat_with_delim(const char* str1, const char* str2, const char* d
 	// an unnecessary allocation is made but w/e
 	char *first = string_concat(str1, delim_between);
 	char *final = string_concat(first, str2);
+	free(first);
+
+	return final;
+}
+
+wchar_t *wstring_concat_with_delim(const wchar_t* str1, const wchar_t* str2, const wchar_t* delim_between) {
+	// an unnecessary allocation is made but w/e
+	wchar_t *first = wstring_concat(str1, delim_between);
+	wchar_t *final = wstring_concat(first, str2);
 	free(first);
 
 	return final;
@@ -340,7 +337,7 @@ wchar_t *clean_wstring(const wchar_t* data) {
 	int i = 0, j = 0;
 	while (i < len) {
 		if (isalpha(data[i])) {
-			clean[j] = tolower(data[i]);
+			clean[j] = towlower(data[i]);
 			++j;
 		}
 		++i;
@@ -441,101 +438,63 @@ static const wchar_t* NON_DIPHTHONGS[] = {
  L"uö", L"öu", L"öa", L"aö", NULL
 };
 
-bool has_diphthong(const char* syllable) {
-	const char **d = &DIPHTHONGS[0];
+bool has_diphthong(const wchar_t* syllable) {
+	const wchar_t **d = &DIPHTHONGS[0];
 	while (*d) {
-		if (strstr(syllable, *d) != NULL) { return true; }
+		if (wcsstr(syllable, *d) != NULL) { return true; }
 		++d;
 	}
 	return false;
 }
 
-//fn has_double_vowel(syllable: &str) -> bool {
-//    for n in DOUBLEVOWELS {
-//        if syllable.contains(n) { return true; }
-//    }
-//
-//    return false;
-//}
-//
-bool has_double_vowel(const char* syllable) {
-	const char **s = &DOUBLEVOWELS[0];
+bool has_double_vowel(const wchar_t* syllable) {
+	const wchar_t **s = &DOUBLEVOWELS[0];
 	while (*s) {
-		if (strstr(syllable, *s) != NULL) { return true; }
+		if (wcsstr(syllable, *s) != NULL) { return true; }
 		++s;
 	}
 
 	return false;
 }
 
-
-//static ALLOWED_CCOMBOS: &'static [&'static str] =
-//&[ "kk", "ll", "mm", "nn", "pp", "rr", "ss", "tt",
-//"sd", "lk", "lt", "rt", "tr", "st", "tk", "mp"
-//
-//];
-//
-
-static const char* ALLOWED_CCOMBOS[] = {
-"kk", "ll", "mm", "nn", "pp", "rr", "ss", "tt",
-"sd", "lk", "lt", "rt", "tr", "st", "tk", "mp", NULL
+static const wchar_t *ALLOWED_CCOMBOS[] = {
+L"kk", L"ll", L"mm", L"nn", L"pp", L"rr", L"ss", L"tt",
+L"sd", L"lk", L"lt", L"rt", L"tr", L"st", L"tk", L"mp", NULL
 };
 
-static const char *FORBIDDEN_CCOMBOS[] = {
-"nm", "mn", "sv", "vs", "kt", 
-"tk", "sr", "sn", "tv", "sm", 
-"ms", "tm", "tl", "nl", "tp", 
-"pt", "tn", "np", "sl", "th", 
-"td", "dt", "tf", "ln", "mt", 
-"kn", "kh", "lr", "kp", "nr",
-"ml", "mk", "km", "nv", "sh",
-"ls", "hn", "tj", "sj", "pk", 
-"rl", "kr", "mj", "kl", "kj",
-"nj", "kv", "hs", "hl", "nh",
-"pm", "mr", "tg", "mh", "hp",
-"kd", "dk", "dl", "ld", "mv", 
-"vm", "pr", "hh", "pn", "tr",
-"ts", "ks", "md", "pj", "jp",
-"kg", "pv", "ph", NULL
-
+static const wchar_t *FORBIDDEN_CCOMBOS[] = {
+L"nm", L"mn", L"sv", L"vs", L"kt", 
+L"tk", L"sr", L"sn", L"tv", L"sm", 
+L"ms", L"tm", L"tl", L"nl", L"tp", 
+L"pt", L"tn", L"np", L"sl", L"th", 
+L"td", L"dt", L"tf", L"ln", L"mt", 
+L"kn", L"kh", L"lr", L"kp", L"nr",
+L"ml", L"mk", L"km", L"nv", L"sh",
+L"ls", L"hn", L"tj", L"sj", L"pk", 
+L"rl", L"kr", L"mj", L"kl", L"kj",
+L"nj", L"kv", L"hs", L"hl", L"nh",
+L"pm", L"mr", L"tg", L"mh", L"hp",
+L"kd", L"dk", L"dl", L"ld", L"mv", 
+L"vm", L"pr", L"hh", L"pn", L"tr",
+L"ts", L"ks", L"md", L"pj", L"jp",
+L"kg", L"pv", L"ph", NULL
 };
 
-//fn has_forbidden_ccombos(word: &str) -> bool {
-//	for c in FORBIDDEN_CCOMBOS {
-//		if word.contains(c) { return true; }
-//	}
-//
-//	return false;
-//}
-//
-
-bool has_forbidden_ccombos(const char* input) {
-	const char** c = &FORBIDDEN_CCOMBOS[0];
+bool has_forbidden_ccombos(const wchar_t* input) {
+	const wchar_t **c = &FORBIDDEN_CCOMBOS[0];
 
 	while (*c) {
-		if (strstr(input, *c) != NULL) { return true; }
+		if (wcsstr(input, *c) != NULL) { return true; }
 		++c;
 	}
 
 	return false;
 }
 
-static const char FORBIDDEN_ENDCONSONANTS[] = {
-"pkrmhvsl"
-};
+static const wchar_t *FORBIDDEN_ENDCONSONANTS = L"pkrmhvsl";
 
-//fn has_forbidden_endconsonant(word: &str) -> bool {
-//	for c in FORBIDDEN_ENDCONSONANTS {
-//		let last_char = word.chars().last().unwrap();
-//		if &last_char == c { return true; }
-//	}
-//
-//	return false;
-//}	
-//
-
-bool has_forbidden_endconsonant(const char *input) {
-	char l = input[strlen(input)-1];
+bool has_forbidden_endconsonant(const wchar_t *input) {
+	char l = input[wcslen(input)-1];
 	size_t i = 0;
 
 	while (i < sizeof(FORBIDDEN_ENDCONSONANTS)) {
@@ -547,24 +506,22 @@ bool has_forbidden_endconsonant(const char *input) {
 }
 
 
+bool wstr_contains(const wchar_t* in, const wchar_t* pattern) {
+	return wcsstr(in, pattern) != NULL;
+}
+
 bool str_contains(const char* in, const char* pattern) {
 	return strstr(in, pattern) != NULL;
 }
 
-
-//fn syllabify(word: &mut word_t) {
-
 void word_syllabify(word_t *word) {
 
-    //let mut offset = 0;
 	size_t offset = 0;
 
 	char *vc_pattern = get_vc_pattern(word->chars);
 	size_t vc_len = strlen(vc_pattern);
 
-//    while offset < vclen {
 	while (offset < vc_len) {
-		//    	let longest = find_longest_vc_match(&vc_pattern, offset);
 		const vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
 		const char *pat = longest->pattern;
 		size_t plen = strlen(longest->pattern);
@@ -575,23 +532,20 @@ void word_syllabify(word_t *word) {
 		}
 
 		else {
-			//    let new_syl = get_substring(&word.chars, offset, plen);
 			wchar_t *new_syl = get_subwstring(word->chars, offset, plen);
 
 			if (offset > 0 && str_contains(pat, "VV") && (!has_diphthong(new_syl)) && (!has_double_vowel(new_syl))) {
-				// need to split this syllable into two
 				size_t vv_offset = strstr(pat, "VV") - pat;
 				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
 
 				wchar_t *p1 = get_subwstring(word->chars, offset, vv_offset + 1);
-				wchar_t *p2 = get_subwstring(word->chars, offset+vv_offset+1, plen - strlen(p1));
+				wchar_t *p2 = get_subwstring(word->chars, offset+vv_offset+1, plen - wcslen(p1));
 
 				word_push_syllable(word, p1);
 				word_push_syllable(word, p2);
 
 
 			} else {
-				//			word.syllables.push(syl_t{chars: new_syl, length_class: longest.L});
 				word_push_syllable(word, new_syl);
 			}
 		}
@@ -615,8 +569,6 @@ static long word_count(const wchar_t* buf) {
 
 	wchar_t *bufdup = wcsdup(buf);
 	wchar_t *endptr;
-
-	printf("%p\n", bufdup);
 
 	long num_words = 0;
 
@@ -654,7 +606,7 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 	long i = 0;
 
 	while (token) {
-		wchar_t *clean = clean_string(token);
+		wchar_t *clean = clean_wstring(token);
 		words[i] = word_create(clean);
 		free(clean);
 		++i;
@@ -665,9 +617,9 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 
 }
 
-wchar_t *convert_to_multibyte(const char* arg, long buffer_size) {
+wchar_t *convert_to_wchar(const char* arg, long buffer_size) {
 
-	wchar_t *mb = malloc(buffer_size * sizeof(wchar_t)); // will waste some memory though
+	wchar_t *wc = malloc(buffer_size * sizeof(wchar_t)); // will waste some memory though
 
 	mbstate_t state;
 	memset(&state, 0, sizeof(state));
@@ -675,13 +627,35 @@ wchar_t *convert_to_multibyte(const char* arg, long buffer_size) {
 	printf("Using locale %s.\n", setlocale( LC_CTYPE, "" ));
 
 	size_t result;
-	result = mbsrtowcs(mb, &arg, buffer_size, &state);
+	result = mbsrtowcs(wc, &arg, buffer_size, &state);
 
 	if (result == (size_t)-1) {
-	       	fputs("convert_to_multibyte: encoding error :(", stderr);
+	       	fputs("convert_to_wchar: encoding error :(", stderr);
 		return NULL;
 	}
 
+	return wc;
+}
+
+char *convert_to_multibyte(const wchar_t* arg, long num_chars) {
+
+	size_t buffer_size = num_chars * sizeof(wchar_t);
+	char *mb = malloc(buffer_size); // will waste some memory though
+
+	mbstate_t state;
+	memset(&state, 0, sizeof(state));
+
+	size_t result;
+	result = wcsrtombs(mb, &arg, buffer_size, &state);
+	if (result == (size_t)-1) {
+	       	fputs("convert_to_multibyte: encoding error :(", stderr);
+		free(mb);
+		return NULL;
+	}
+
+	mb[buffer_size-1] = '\0';
+
+	
 	return mb;
 }
 
@@ -702,7 +676,7 @@ dict_t read_file_to_words(const char* filename) {
 	long filesize;
 
 	char *buf = read_file_to_buffer(fp, &filesize);
-	wchar_t *buf_mb = convert_to_multibyte(buf, filesize);
+	wchar_t *buf_mb = convert_to_wchar(buf, filesize);
 
 	free(buf);
 	fclose(fp);
@@ -741,64 +715,64 @@ word_t *get_random_word(dict_t *dict) {
 	return &dict->words[get_random(0, dict->num_words)];
 }
 
-static int str_hasanyof(const char* str, const char* chars) {
-	const char *c = &chars[0];
+static int str_hasanyof(const wchar_t* str, const wchar_t* chars) {
+	const wchar_t *c = &chars[0];
 
-	while (*c) {
-		if (strchr(str, *c)) { return 1; }
+	while (*c != L'\0') {
+		if (wcschr(str, *c)) { return 1; }
 	       	++c;
 	}
 
 	return 0;
 }
 
-int get_vowel_harmony_state(const char* syllable) {
+int get_vowel_harmony_state(const wchar_t* word) {
 	int state = 0;
 
-	if (str_hasanyof(syllable, "aou")) state |= 0x1;
-	if (str_hasanyof(syllable, "äöy")) state |= 0x2;
+	if (str_hasanyof(word, L"aou")) state |= 0x1;
+	if (str_hasanyof(word, L"äöy")) state |= 0x2;
 
 	return state;
 }
 
-int get_num_trailing_vowels(const char *word) {
+int get_num_trailing_vowels(const wchar_t *word) {
 	int num = 0;
-	size_t len = strlen(word);
+	size_t len = wcslen(word);
 	while (vc_map(word[len-num-1]) == 'V' && num < len) ++num;
 
 	return num;
 
 }
 
-int get_num_beginning_vowels(const char *word) {
+int get_num_beginning_vowels(const wchar_t *str) {
 	int num = 0;
-	size_t len = strlen(word);
-	while (vc_map(word[num]) == 'V' && num < len) ++num;
+	size_t len = wcslen(str);
+	while (vc_map(str[num]) == 'V' && num < len) ++num;
 
 	return num;
 }
 
-char get_first_consonant(const char *str) {
-	size_t len = strlen(str);
+wchar_t get_first_consonant(const wchar_t *str) {
+	size_t len = wcslen(str);
 	int i = 0;
 	while (vc_map(str[i]) != 'C' && i < len) ++i;
-	if (i == len) return '\0';
+	if (i == len) return L'\0';
 	else return str[i];
 }
 
-static const char *FORBIDDEN_VOWELENDINGS[] = {
-"ai", "ei", "ou", "ae", "au", "iu", "oe", "ue", "äy", "ii", "yy", "äi", "eu", NULL
+static const wchar_t *FORBIDDEN_VOWELENDINGS[] = {
+L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"äi", L"eu", NULL
 };
 
-bool ends_in_wrong_vowelcombo(const char *str) {
+bool ends_in_wrong_vowelcombo(const wchar_t *str) {
 	const char* vcp = get_vc_pattern_grep(str);
 
 	if (strstr("VV$", vcp)) {
-		char *substr = get_substring(str, strlen(str) - 2, 2);
-		const char **f = &FORBIDDEN_VOWELENDINGS[0];
+		wchar_t *substr = get_subwstring(str, wcslen(str) - 2, 2);
+		const wchar_t **f = &FORBIDDEN_VOWELENDINGS[0];
 
 		while (f) {
-			if (strncmp(*f, substr, 2) == 0) { return true; }
+			if (wcsncmp(*f, substr, 2) == 0) { return true; }
 			++f;
 		}
 
@@ -810,11 +784,11 @@ bool ends_in_wrong_vowelcombo(const char *str) {
 
 syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
-	printf("get_random_syllable_from_word: word = %s, returning syllable %ld\n", w->chars, r);
+	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
 	return &w->syllables.syllables[r];	
 }
 
-char *get_random_syllable_any(dict_t *dict, bool ignore_last) {
+wchar_t *get_random_syllable_any(dict_t *dict, bool ignore_last) {
 	word_t *w = get_random_word(dict);
 	while (w->syllables.length == 1) {
 		w = get_random_word(dict);
@@ -822,13 +796,13 @@ char *get_random_syllable_any(dict_t *dict, bool ignore_last) {
 
 	syl_t *s = get_random_syllable_from_word(w, ignore_last);
 
-	return strdup(s->chars);
+	return wcsdup(s->chars);
 }
 
 //fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
-char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
+wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
-	char new_word[256]; // should be enough :D
+	wchar_t new_word[256]; // should be enough :D
 	memset(new_word, 0, sizeof(new_word));
 
 	int num_syllables = 3; // get random blah balh	
@@ -838,41 +812,30 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 			word_t *w = get_random_word(dict);
 			double r = get_randomf();
 			if (w->syllables.length > 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
-				return strdup(w->chars);
+				return wcsdup(w->chars);
 			}
 		}
 	}
 
-//	let mut new_syllables: Vec<String> = Vec::new();
 	sylvec_t new_syllables = sylvec_create();
-//	
-//	let mut vharm_state = 0;
 	int vharm_state = 0;
-//	let mut prev_first_c = '0';
-	char prev_first_c = '\0';
-//
-//	for n in 0..num_syllables {
-	for (int n = 0; n < num_syllables; ++n) {
-//		
-//		let ignore_last = n == 0;
-		bool ignore_last = (n == 0);
-//		let mut syl = get_random_syllable_any(&word_list, rng, ignore_last);
-		char *syl = get_random_syllable_any(dict, ignore_last);
+	wchar_t prev_first_c = L'\0';
 
-//		let mut syl_vharm: usize = 0;
+	for (int n = 0; n < num_syllables; ++n) {
+		bool ignore_last = (n == 0);
+		wchar_t *syl = get_random_syllable_any(dict, ignore_last);
+
 		int syl_vharm = 0;
-//		
-//		if rules_apply {
 		if (rules_apply) {
 			while (1) {
 				syl_vharm = get_vowel_harmony_state(syl);
-				char first_c = get_first_consonant(syl);
-				char *concatd = string_concat(new_word, syl);
+				wchar_t first_c = get_first_consonant(syl);
+				wchar_t *concatd = wstring_concat(new_word, syl);
 
 				if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
 					goto new_syllable;
 				}
-				else if (n > 0 && strlen(syl) < 2) {
+				else if (n > 0 && wcslen(syl) < 2) {
 					goto new_syllable;
 				}
 				else if (sylvec_contains(&new_syllables, syl)) {
@@ -912,15 +875,15 @@ char *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) 
 		}
 
 		sylvec_pushstr(&new_syllables, syl);
-		strcat(new_word, syl);
+		wcscat(new_word, syl);
 
 	}
 
-	if (strlen(new_word) < 2) {
+	if (wcslen(new_word) < 2) {
 		return construct_random_word(dict, max_syllables, rules_apply);
 	} 
 	else {
-		return strdup(new_word);
+		return wcsdup(new_word);
 	}
 
 }
@@ -1069,56 +1032,49 @@ syl_t *get_syllable_with_lclass(sylvec_t *sv, char length_class) {
 
 
 //fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t, foot: &str) -> String {
-char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, foot_t *foot) {
-//	let mut new_verse = String::new();
-	char new_verse[2048];
+wchar_t *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, foot_t *foot) {
+	wchar_t new_verse[2048];
 	memset(new_verse, 0, sizeof(new_verse));
 
-//	println!("num_words: {}", num_words);
-
-//	for j in 0..num_words {
 	for (int j = 0; j < num_words; ++j) {
 
-//		let new_word = construct_random_word(&word_list, rng, 4, state.rules_apply);
-		char *new_word = construct_random_word(dict, 4, state->rules_apply);
-		//new_verse.push_str(&new_word);
-		strcat(new_verse, new_word);
+		wchar_t *new_word = construct_random_word(dict, 4, state->rules_apply);
+		wcscat(new_verse, new_word);
 		free(new_word);
 
-//		let r = rng.gen::<f64>();
 		double r = get_randomf();
 
 		if (last_verse && j == num_words - 1) {
 			if (r < 0.08) {
-				strcat(new_verse, "!");
+				wcscat(new_verse, L"!");
 			}
 			else if (r < 0.15) {
-				strcat(new_verse, "?");
+				wcscat(new_verse, L"?");
 			}
 			else if (r < 0.25) {
-				strcat(new_verse, ".");
+				wcscat(new_verse, L".");
 			}
 
 		} else {
 			if (r < 0.02) {
-				strcat(new_verse, ";");
+				wcscat(new_verse, L";");
 			} 
 			else if (r < 0.15) {
-				strcat(new_verse, ",");
+				wcscat(new_verse, L",");
 		
 			} else if (r < 0.18) {
-				strcat(new_verse, ":");
+				wcscat(new_verse, L":");
 			}
 
 		}
 
 		if (j < num_words - 1) {
-			strcat(new_verse, " ");
+			wcscat(new_verse, L" ");
 		}
 
 	}
 
-	return strdup(new_verse);
+	return wcsdup(new_verse);
 	
 }
 
@@ -1135,31 +1091,17 @@ char *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstat
 //}
 
 //fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &kstate_t) -> String {
-char *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
+wchar_t *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 
-	char new_stanza[4096];
+	wchar_t new_stanza[4096];
 	memset(new_stanza, 0, sizeof(new_stanza));
-//	let mut i = 0;
-//    let mut foot: foot_t = foot_t { spats: Vec::new() };
-
-//    let syllables = compile_list_of_syllables(word_list);
-//    	sylvec_t s = compile_list_of_syllables(dict);
-
-//    foot.spats.push("211-21-2-221".to_string());
-//   foot.spats.push("21-2-21-2-22".to_string());
-//  foot.spats.push("2-111-12-121".to_string());
-// foot.spats.push("122-112-2".to_string());
-	
-//    for f in foot.spats {
-    for (int i = 0; i < num_verses; ++i) {
-//		new_stanza.push('\n');
-		strcat(new_stanza, "\n");
-//		let new_verse = generate_verse_with_foot(&syllables, rng, state, &f);
-		char *new_verse = generate_random_verse(dict, 4, false, state, NULL);
-		strcat(new_stanza, new_verse);
+	for (int i = 0; i < num_verses; ++i) {
+		wcscat(new_stanza, L"\n");
+		wchar_t *new_verse = generate_random_verse(dict, 4, false, state, NULL);
+		wcscat(new_stanza, new_verse);
 
 		if (state->LaTeX_output) {
-			strcat(new_stanza, " \\\\");
+			wcscat(new_stanza, L" \\\\");
 		}
 
 		free(new_verse);
@@ -1167,91 +1109,69 @@ char *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 	}
 
 	if (state->LaTeX_output) { 
-		strcat(new_stanza, "!\n\n");
+		wcscat(new_stanza, L"!\n\n");
 	}
 
-	return strdup(new_stanza);
+	return wcsdup(new_stanza);
 
 }
 
-//fn capitalize_first(word: &str) -> String {
-//
-//    let mut v: Vec<char> = word.chars().collect();
-//    v[0] = v[0].to_uppercase().nth(0).unwrap();
-//    let s2: String = v.into_iter().collect();
-//    let s3 = &s2;
-//
-//    return s3.to_string();
-//
-//}
-
-char *capitalize_first_nodup(char *str) {
+wchar_t *capitalize_first_nodup(wchar_t *str) {
 	str[0] = toupper(str[0]);
 	return str;
 }
 
-char *capitalize_first_dup(char *str) {
-	char *dup = strdup(str);
+wchar_t *capitalize_first_dup(wchar_t *str) {
+	wchar_t *dup = wcsdup(str);
 	dup[0] = toupper(dup[0]);
 
 	return dup;
 }
 //fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &kstate_t) -> String {
-char *generate_poem(dict_t *dict, kstate_t *state) {
+wchar_t *generate_poem(dict_t *dict, kstate_t *state) {
 
-//    let distr = generate_distribution_low(1, 3);
- //   let num_words_title = get_random_with_distribution(rng, &distr);
 	int num_words_title = 4;
-//    let max_syllables = 4;
 	int max_syllables = 4;
 
-//    let mut title = capitalize_first(&construct_random_word(word_database, rng, max_syllables, state.rules_apply));
-	char *title = capitalize_first_nodup(construct_random_word(dict, max_syllables, state->rules_apply));
+	wchar_t *title = capitalize_first_nodup(construct_random_word(dict, max_syllables, state->rules_apply));
 
-    for (int i = 1; i < num_words_title; ++i) {
-	    // crap
-	    char *new_title = string_concat_with_delim(title, construct_random_word(dict, max_syllables, state->rules_apply), " ");
-	    free(title);
-	    title = new_title;
-    }
+	for (int i = 1; i < num_words_title; ++i) {
+		// crap
+		wchar_t *new_title = wstring_concat_with_delim(title, construct_random_word(dict, max_syllables, state->rules_apply), L" ");
+		free(title);
+		title = new_title;
+	}
 
-//    let mut poem = String::new();
-    char poem[8096];
-    memset(poem, 0, sizeof(poem));
+	wchar_t poem[8096];
+	memset(poem, 0, sizeof(poem));
 
-    if (state->LaTeX_output) {
-		strcat(poem, "\\poemtitle{");
-		strcat(poem, title);
-		strcat(poem, "}\n");
-		strcat(poem, "\\settowidth{\\versewidth}{levaton, sitän kylpää ranjoskan asdf}\n");
-	    	strcat(poem, "\\begin{verse}[\\versewidth]\n");
-    } else {
-	    strcat(poem, title);
-    }
+	if (state->LaTeX_output) {
+		wcscat(poem, L"\\poemtitle{");
+		wcscat(poem, title);
+		wcscat(poem, L"}\n");
+		wcscat(poem, L"\\settowidth{\\versewidth}{levaton, Lsitän kylpää ranjoskan asdf}\n");
+		wcscat(poem, L"\\begin{verse}[\\versewidth]\n");
+	} else {
+		wcscat(poem, title);
+	}
 
-//    let num_stanzas = get_random(rng, 1, 2); 
-    int num_stanzas = 3;
-    
-    for (int i = 0; i < num_stanzas; ++i) {
+	int num_stanzas = 3;
 
-//	let distr = generate_distribution_mid(1, 6);
-//    	let num_verses = get_random_with_distribution(rng, &distr);
-	int num_verses = 2;
+	for (int i = 0; i < num_stanzas; ++i) {
 
-//	let new_stanza = generate_random_stanza(word_database, rng, num_verses, state);
-	char *new_stanza = generate_random_stanza(dict, num_verses, state);
+		int num_verses = 2;
+		wchar_t *new_stanza = generate_random_stanza(dict, num_verses, state);
 
-//	poem.push_str(&format!("{}\n", new_stanza));
-	strcat(poem, new_stanza);
-	free(new_stanza);
-    }
+		wcscat(poem, new_stanza);
+		free(new_stanza);
+	}
 
-    if (state->LaTeX_output) {
-	    strcat(poem, "\\end{verse}\n");
-	    strcat(poem, "\\newpage\n");
-    }
+	if (state->LaTeX_output) {
+		wcscat(poem, L"\\end{verse}\n");
+		wcscat(poem, L"\\newpage\n");
+	}
 
-    return strdup(poem);
+	return wcsdup(poem);
 }
 
 static const char *LATEX_PREAMBLE = 
@@ -1302,37 +1222,44 @@ void print_as_latex_document(const char* poem, const char *poetname) {
 }
 
 //fn generate_random_poetname(word_list: &Vec<word_t>, rng: &mut StdRng) -> String {
-char *generate_random_poetname(dict_t *dict) {
+wchar_t *generate_random_poetname(dict_t *dict) {
 
-	char name[128];
+	wchar_t name[128];
 	memset(name, 0, sizeof(name));
 
 //	let first_name = capitalize_first(&construct_random_word(word_list, rng, 3, true));
-	char *first_name = capitalize_first_nodup(construct_random_word(dict, 3, true));
-	//let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1, true)).chars().next().unwrap();
-	char *second_name = capitalize_first_nodup(construct_random_word(dict, 2, true));
+	wchar_t *first_name = capitalize_first_nodup(construct_random_word(dict, 3, true));
+	//let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1, true)).wchar_ts().next().unwrap();
+	wchar_t *second_name = capitalize_first_nodup(construct_random_word(dict, 2, true));
 	second_name[1] = '\0';
 
 //	let surname = capitalize_first(&construct_random_word(word_list, rng, 5, true));
-	char *surname = capitalize_first_nodup(construct_random_word(dict, 5, true));
+	wchar_t *surname = capitalize_first_nodup(construct_random_word(dict, 5, true));
 
-	strcat(name, first_name);
-	strcat(name, " ");
-	strcat(name, second_name);
-	strcat(name, ". ");
-	strcat(name, surname);
+	wcscat(name, first_name);
+	wcscat(name, L" ");
+	wcscat(name, second_name);
+	wcscat(name, L". ");
+	wcscat(name, surname);
 
 	free(first_name);
 	free(second_name);
 	free(surname);
 
-	return strdup(name);
+	return wcsdup(name);
 
 }
 
 //fn main() {
 int main(int argc, char *argv[]) {
 	setlocale(LC_ALL, "fi_FI.UTF-8");
+
+	wchar_t asd[] = L"ÄÄÄÄÖÖLÄÖLÄLÖÄÖLÄ";
+
+	char *converted = convert_to_multibyte(asd, wcslen(asd));
+	printf("%s\n", converted);
+
+	return 1;
 
 	dict_t dict = read_file_to_words("kalevala.txt");
 
@@ -1346,13 +1273,13 @@ int main(int argc, char *argv[]) {
 
 	printf("(info: using %u as random seed)\n\n", seed);
 
-	kstate_t state;
+		kstate_t state;
 	state.numeric_seed = seed;
 	state.LaTeX_output = 0;
 	state.rules_apply = 1;
 
-	char *poem = generate_poem(&dict, &state);
-	printf("%s\n", poem);
+	wchar_t *poem = generate_poem(&dict, &state);
+	printf("%ls\n", poem);
 	free(poem);
 
 }
