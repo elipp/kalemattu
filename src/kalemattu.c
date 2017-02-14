@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <locale.h>
 
 typedef struct strvec_t {
 	char **strs;
@@ -26,6 +27,9 @@ strvec_t strvec_create() {
 }
 
 int strvec_push(strvec_t* vec, const char* str) {
+
+	printf("strvec_push: capacity = %d, length = %d\n", vec->capacity, vec->length);
+
 	if (vec->length < 1) {
 		vec->capacity = 2;
 		vec->strs = malloc(vec->capacity*sizeof(char*));
@@ -81,14 +85,9 @@ char *get_substring(const char* input, size_t offset, size_t n) {
 	size_t len = strlen(input);
 	char *r = malloc((len-offset) + n + 1);
 	strncpy(r, input + offset, n);
+	r[n] = '\0';
 	return r;
 }
-
-//fn get_vc_pattern(word: &str) -> String {
-//	let mut p = String::new();
-//	for c in word.chars() { p.push(vc_map(c)); }
-//	return p;
-//}
 
 char *get_vc_pattern(const char* input) {
 	size_t len = strlen(input);
@@ -96,6 +95,10 @@ char *get_vc_pattern(const char* input) {
 	for (int i = 0; i < len; ++i) {
 		vc[i] = vc_map(input[i]);
 	}
+
+	vc[len] = '\0';
+
+	printf("get_vc_pattern: input: %s, returning %s\n", input, vc);
 	return vc;
 }
 
@@ -205,22 +208,15 @@ int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
 }
 
 int sylvec_pushstr(sylvec_t *s, const char *syl) {
-	if (s->length < 1) {
-		s->capacity = 2;
-		s->syllables = malloc(s->capacity*sizeof(syl_t));
-		s->length = 1;
-	}
-	else if (s->length + 1 > s->capacity) {
-		s->capacity *= 2;
-		s->syllables = realloc(s->syllables, s->capacity*sizeof(syl_t));
-		s->length += 1;
-	}
+
+	printf("sylvec_pushstr: capacity = %lu, length = %lu\n", s->capacity, s->length);
 
 	char *vc = get_vc_pattern(syl);
 	const vcp_t *L = find_longest_vc_match(vc, 0);
 	free(vc);
 	syl_t new_syl = syl_create(syl, L->length_class);
-	s->syllables[s->length - 1] = new_syl;
+
+	sylvec_pushsyl(s, &new_syl);
 
 	return 1;
 
@@ -266,6 +262,7 @@ word_t word_create(const char* chars) {
 	word_t w;
 	w.chars = strdup(chars);
 	w.length = strlen(chars);
+	w.syllables = sylvec_create();
 	word_syllabify(&w);
 
 	return w;
@@ -295,17 +292,20 @@ typedef struct foot_t {
 } foot_t;
 
 char *clean_string(const char* data) {
-	char *dup = strdup(data);
+	size_t len = strlen(data);
+	char *clean = malloc(len); // this will waste a little bit of memory
 	int i = 0, j = 0;
-	while (i < strlen(dup)) {
-		if (isalpha(dup[i])) {
-			dup[j] = tolower(dup[i]);
+	while (i < len) {
+		if (isalpha(data[i])) {
+			clean[j] = tolower(data[i]);
 			++j;
 		}
 		++i;
 	}
 
-	return dup;
+	clean[j] = '\0';
+	printf("clean_string: data = \"%s\", ret = \"%s\", j = %d\n", data, clean, j);
+	return clean;
 }
 
 
@@ -336,35 +336,19 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 	const vcp_t *longest = &error_pat;
 	long vclen = strlen(vc);
 	const vcp_t *current = &VC_PATTERNS[0];
+
 	while (current->pattern != NULL) {
 	
-//		let mut full_match = true;
-		bool full_match = true;
-		
-		//let plen = pat.chars().count();
+		bool full_match = false;
 		size_t plen = strlen(current->pattern);
 
 		if ((vclen - offset) >= plen) {
-//			for c in pat.chars() {
-//				if get_nth(vc, i) != c  {
-//					full_match = false;
-//					break;
-//				}
-//				i = i+1;
-//			}
-			if (strncmp(current->pattern, vc, plen) == 0) {
-				full_match = false;
+			if (strncmp(current->pattern, vc + offset, plen) == 0) {
+				full_match = true;
 			}
 
 			if (full_match) {
 				if ((vclen - offset) > plen) {
-//					if (get_nth(pat, plen - 1) == 'C') {
-//						// then the next letter can't be a vowel
-//						if get_nth(vc, plen + offset) == 'V'{
-//							//println!("nextvowel check for {} at offset {} failed!", p, offset);
-//							full_match = false;
-//						}
-//					}
 					if (current->pattern[plen-1] == 'C') {
 						if (vc[plen+offset] == 'V') {
 							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
@@ -373,12 +357,8 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 					}
 				}
 
-//				if full_match && longest.P.chars().count() < plen {
-//					longest = p;
-//				//    println!("new longest matching pattern: for {} -> {}", &vc[offset..], p);
-//				}
-
 				if (full_match && strlen(longest->pattern) < plen) {
+					printf("new longest matching pattern = %s (input %s, offset %ld)\n", current->pattern, vc, offset);
 					longest = current;
 				}
 			}
@@ -389,21 +369,12 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 //	println!("syllable: {}, pattern: {}, length class: {}", vc, longest.P, longest.L);
 
+//	printf("vc: %s, longest pattern: %s, offset = %lu\n", vc, longest->pattern, offset);
+
 	return longest;
 
 }
 
-//fn get_substring(word: &str, offset: usize, n: usize) -> String {
- //   let mut s = String::new();
-  //  let mut i = 0;
-   // for c in word.chars().skip(offset) {
-    //    if i >= n { break; }
-     //   s.push(c);
-     //   i = i+1;
-    //}
-
-//    return s;
-//}
 
 static const char* DIPHTHONGS[] = {
 "yi", "öi", "äi", "ui", "oi",
@@ -551,41 +522,33 @@ void word_syllabify(word_t *word) {
     //let mut offset = 0;
 	size_t offset = 0;
 
-//    let vc_pattern = get_vc_pattern(&word.chars); 
 	char *vc_pattern = get_vc_pattern(word->chars);
-//    let vclen = vc_pattern.chars().count();
 	size_t vc_len = strlen(vc_pattern);
 
 //    while offset < vclen {
 	while (offset < vc_len) {
-//    	let longest = find_longest_vc_match(&vc_pattern, offset);
+		//    	let longest = find_longest_vc_match(&vc_pattern, offset);
 		const vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
-		//let &pat = &longest.P;
 		const char *pat = longest->pattern;
-		//let plen = pat.chars().count();
 		size_t plen = strlen(longest->pattern);
 
 		if (plen < 1) {
-	//          println!("(warning: syllabify() for word \"{}\" failed, no matches found)", word.chars);
-	//	    word.syllables.push(word.chars.to_string());
-		    break;
+			// didn't find a sensible vc match
+			break;
 		}
 
 		else {
 			//    let new_syl = get_substring(&word.chars, offset, plen);
 			char *new_syl = get_substring(word->chars, offset, plen);
 
-			if (offset > 0 && str_contains(pat, "VV") && !has_diphthong(new_syl) && !has_double_vowel(new_syl)) {
+			if (offset > 0 && str_contains(pat, "VV") && (!has_diphthong(new_syl)) && (!has_double_vowel(new_syl))) {
 				// need to split this syllable into two
-				//			let vv_offset = pat.find("VV").unwrap();
 				size_t vv_offset = strstr(pat, "VV") - pat;
-				//			let new_syl_split1 = get_substring(&word.chars, offset, vv_offset+1);
+				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
+
 				char *p1 = get_substring(word->chars, offset, vv_offset + 1);
-				//			let new_syl_split2 = get_substring(&word.chars, offset+vv_offset+1, plen - new_syl_split1.chars().count());
 				char *p2 = get_substring(word->chars, offset+vv_offset+1, plen - strlen(p1));
 
-
-				//println!("split syllable {} into two: {}-{}", new_syl, &new_syl_split1, &new_syl_split2);
 				word_push_syllable(word, p1);
 				word_push_syllable(word, p2);
 
@@ -595,9 +558,11 @@ void word_syllabify(word_t *word) {
 				word_push_syllable(word, new_syl);
 			}
 		}
-		
-        offset = offset + plen;
-    }
+
+		offset = offset + plen;
+	}
+
+	free(vc_pattern);
 
 }
 
@@ -644,9 +609,11 @@ word_t *construct_word_list(const char* buf, long num_words) {
 	long i = 0;
 
 	while (token) {
-		token = strtok_r(NULL, " ", &endptr);
-		words[i] = word_create(token);
+		char *clean = clean_string(token);
+		words[i] = word_create(clean);
+		free(clean);
 		++i;
+		token = strtok_r(NULL, " ", &endptr);
 	}
 	
 	return words;
@@ -920,6 +887,7 @@ bool ends_in_wrong_vowelcombo(const char *str) {
 
 syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
+	printf("get_random_syllable_from_word: word = %s, returning syllable %ld\n", w->chars, r);
 	return &w->syllables.syllables[r];	
 }
 
@@ -1441,8 +1409,8 @@ char *generate_random_poetname(dict_t *dict) {
 
 //fn main() {
 int main(int argc, char *argv[]) {
+	setlocale(LC_ALL, "fi_FI");
 
-    //let mut source = read_file_to_words("kalevala.txt");
 	dict_t dict = read_file_to_words("kalevala.txt");
 
 	if (dict.num_words < 1) {
@@ -1453,7 +1421,6 @@ int main(int argc, char *argv[]) {
 	unsigned int seed = time(NULL);
 	srand(seed);
 
-//    writeln!(&mut stderr, "(info: using {} as random seed)\n\n", s).unwrap();
 	printf("(info: using %u as random seed)\n\n", seed);
 
 	kstate_t state;
@@ -1461,65 +1428,6 @@ int main(int argc, char *argv[]) {
 	state.LaTeX_output = 0;
 	state.rules_apply = 1;
 
-//    let mut args: Vec<_> = env::args().collect();
-//
-//    let mut state_vars = kstate_t { numeric_seed: false, LaTeX_output: false, rules_apply: true };
-//
-//    for a in args.iter() {
-//	if a == "--latex" {
-//		writeln!(&mut stderr, "\n(info: option --latex provided, using LaTeX/verse suitable output!)").unwrap();
-//		state_vars.LaTeX_output = true;
-//	}
-//	else if a == "--numeric" {
-//		writeln!(&mut stderr, "\n(info: option --numeric provided, interpreting given seed as base-10 integer)").unwrap();
-//		state_vars.numeric_seed = true;
-//	}
-//	else if a == "--chaos" {
-//		writeln!(&mut stderr, "\n(info: option --chaos provided, disabling all filtering rules!)").unwrap();
-//		state_vars.rules_apply = false;
-//	}
-//    }
-//
-//    // this should remove any arguments beginning with "--"
-//    args.retain(|i|i.chars().take(2).collect::<Vec<char>>() != &['-', '-']);
-//
-//    let s = match args.len() {
-//    	2 => { 
-//		match state_vars.numeric_seed {
-//			true => args[1].parse::<usize>().unwrap(),
-//
-//			false =>  {
-//				writeln!(&mut stderr, "\n(info: option --numeric not provided, hashing string \"{}\" to be used as seed.)", args[1]).unwrap();
-//				let mut hasher = SipHasher::new();
-//				args[1].hash(&mut hasher);
-//				hasher.finish() as usize
-//			}
-//		}
-//	},
-//
-//	_ => time::precise_time_ns() as usize
-//    };
-//
-//
-//    let seed: &[_] = &[s,s,s,s];
-//
-//    let mut rng: StdRng = SeedableRng::from_seed(seed);
-
-
-//    let mut poems: Vec<String> = Vec::new();
-
-//   if state_vars.LaTeX_output {
-//	let mut i = 0;
-//	while i < 10 {
-//		poems.push(generate_poem(&source, &mut rng, &state_vars));
-//		i += 1;
-//	}
-//
-//	print_as_latex_document(&poems, &generate_random_poetname(&source, &mut rng));
-//
-//   } else {
-
-//println!("{}", generate_poem(&source, &mut rng, &state_vars));
 	char *poem = generate_poem(&dict, &state);
 
 	printf("%s\n", poem);
