@@ -889,150 +889,16 @@ wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_appl
 
 }
 
-//fn construct_word_with_foot<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng, foot: &str) -> String {
-// 	let mut new_word = String::new();
-//
-//	let num_syllables = foot.chars().count();
-//
-////	if num_syllables == 1 {
-////		loop {
-////			let w = get_random_word(word_list, rng);
-////			let r = rng.gen::<f64>();
-////
-////			if w.syllables.len() == 1 || 
-////			   w.chars.chars().count() <= 4 || 
-////			   (r < 0.20 && w.chars.chars().count() <= 5) {
-////
-////			       	return w.chars.clone(); 
-////			}
-////		}
-////	}
-//
-//	let mut new_syllables: Vec<String> = Vec::new();
-//	
-//	let mut vharm_state = 0;
-//	let mut prev_first_c = '0';
-//
-//    for (n, LC) in foot.chars().enumerate() {
-//
-//        let ignore_last = n == 0;
-//        let mut syl = get_syllable_with_lclass(&syllables, rng, LC);
-//        let mut syl_vharm: usize = 0;
-//
-//        loop { 
-//
-//            syl_vharm = get_vowel_harmony_state(&syl); 
-//            let first_c = get_first_consonant(&syl);
-//
-////            println!("word (so far): {}, desired lclass: {} syl: {}", new_word, LC, syl);
-//
-//            if syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            } 
-//            else if n > 0 && syl.chars().count() < 2 {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            }
-//            else if new_syllables.contains(&syl) {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            }
-//            else if has_forbidden_ccombos(&(new_word.clone() + &syl)) {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            }
-//            else if get_num_trailing_vowels(&new_word) + get_num_beginning_vowels(&syl) > 2 {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            }
-//            else if (n == num_syllables-1) && (has_forbidden_endconsonant(&syl) || ends_in_wrong_vowelcombo(&syl)) {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            } 
-//            else if first_c != '0' && first_c == prev_first_c {
-//                syl = get_syllable_with_lclass(&syllables, rng, LC);
-//            }
-//
-//            else { 
-//                prev_first_c = first_c;
-//                break;
-//            }
-//
-//        }
-//
-//        if vharm_state == 0 {
-//            // we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
-//            if syl_vharm > 0 {
-//                vharm_state = syl_vharm;
-//            }
-//        }
-//
-//        new_syllables.push(syl.clone());
-//        new_word.push_str(&syl);
-//
-//    }
-//
-////    println!("{}", new_word);
-//
-//	return new_word;
-//
-//}   
-
-//fn get_random_syllable_from_word(word: &word_t, rng: &mut StdRng, ignore_last: bool) -> String {
-//
-//	let mut sindex: usize = word.syllables.len();
-//	if ignore_last {
-//		sindex -= 1;
-//	}
-//
-//	let syl = word.syllables[get_random(rng, 0, sindex)].chars.clone();
-//	
-//	return syl;
-//}
-
-//fn get_random_syllable_any(word_list: &Vec<word_t>, rng: &mut StdRng, ignore_last: bool) -> String {
-//	let mut word = get_random_word(word_list, rng);
-//	loop {
-//		if word.syllables.len() == 1 {
-//			word = get_random_word(word_list, rng);
-//		} else {
-//			break;
-//		}
-//	}
-//	let syl = get_random_syllable_from_word(&word, rng, ignore_last);
-//
-//	return syl;
-//}
-
-
-//fn get_random_syllable<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng) -> &'a syl_t {
-//    let syl = &syllables[get_random(rng, 0, syllables.len() - 1)];
-//    return syl;
-//}
 
 syl_t *get_random_syllable(sylvec_t *sv) {
 	return &sv->syllables[get_random(0, sv->length - 1)];
 }
-
-//fn get_syllable_with_lclass(syllables: &Vec<syl_t>, rng: &mut StdRng, length_class: char) -> String {
-//
-//	let mut syl = get_random_syllable(&syllables, rng);
-//    loop {
-//        if syl.length_class != length_class {
-//            syl = get_random_syllable(&syllables, rng);
-//   //         println!("{}, {} != {}", syl.chars, length_class, syl.length_class);
-//        }
-//        else {
-//    //        println!("OK! {}, {} == {}", syl.chars, length_class, syl.length_class);
-//            break;
-//        }
-//    }
-//
-//	return syl.chars.clone(); 
-//
-//}
 
 syl_t *get_syllable_with_lclass(sylvec_t *sv, char length_class) {
 	return &sv->syllables[0]; // TODO
 }
 
 
-//fn generate_random_verse<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_words: usize, last_verse: bool, state: &kstate_t, foot: &str) -> String {
 wchar_t *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, foot_t *foot) {
 	wchar_t new_verse[2048];
 	memset(new_verse, 0, sizeof(new_verse));
@@ -1079,19 +945,6 @@ wchar_t *generate_random_verse(dict_t *dict, long num_words, bool last_verse, ks
 	
 }
 
-//fn generate_verse_with_foot<'a>(syllables: &'a Vec<syl_t>, rng: &mut StdRng, state: &kstate_t, foot: &str) -> String {
-//    let mut new_verse = String::new();
-//
-//    for w in foot.split("-") {
-//        let num_syllables = w.chars().count();
-//        let w = construct_word_with_foot(syllables, rng, &w);
-//        new_verse = new_verse + &w + " ";
-//    }
-//
-//    return new_verse;
-//}
-
-//fn generate_random_stanza<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, num_verses: usize, state: &kstate_t) -> String {
 wchar_t *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *state) {
 
 	wchar_t new_stanza[4096];
@@ -1128,7 +981,7 @@ wchar_t *capitalize_first_dup(wchar_t *str) {
 
 	return dup;
 }
-//fn generate_poem(word_database: &Vec<word_t>, rng: &mut StdRng, state: &kstate_t) -> String {
+
 wchar_t *generate_poem(dict_t *dict, kstate_t *state) {
 
 	int num_words_title = 4;
@@ -1213,7 +1066,6 @@ void print_latex_title_page(const char* poetname) {
 
 }
 
-//fn print_as_latex_document(poems: &Vec<String>, poetname: &str) {
 void print_as_latex_document(const char* poem, const char *poetname) {
 	print_latex_preamble();
 	print_latex_title_page(poetname);
@@ -1228,13 +1080,10 @@ wchar_t *generate_random_poetname(dict_t *dict) {
 	wchar_t name[128];
 	memset(name, 0, sizeof(name));
 
-//	let first_name = capitalize_first(&construct_random_word(word_list, rng, 3, true));
 	wchar_t *first_name = capitalize_first_nodup(construct_random_word(dict, 3, true));
-	//let second_initial = capitalize_first(&construct_random_word(word_list, rng, 1, true)).wchar_ts().next().unwrap();
 	wchar_t *second_name = capitalize_first_nodup(construct_random_word(dict, 2, true));
-	second_name[1] = '\0';
+	second_name[1] = L'\0';
 
-//	let surname = capitalize_first(&construct_random_word(word_list, rng, 5, true));
 	wchar_t *surname = capitalize_first_nodup(construct_random_word(dict, 5, true));
 
 	wcscat(name, first_name);
@@ -1268,7 +1117,7 @@ int main(int argc, char *argv[]) {
 
 	printf("(info: using %u as random seed)\n\n", seed);
 
-		kstate_t state;
+	kstate_t state;
 	state.numeric_seed = seed;
 	state.LaTeX_output = 0;
 	state.rules_apply = 1;
