@@ -332,11 +332,12 @@ char *clean_string(const char* data) {
 }
 
 wchar_t *clean_wstring(const wchar_t* data) {
+
 	size_t len = wcslen(data);
 	wchar_t *clean = malloc(len*sizeof(wchar_t)); // this will waste a little bit of memory
 	int i = 0, j = 0;
 	while (i < len) {
-		if (isalpha(data[i])) {
+		if (iswalpha(data[i])) {
 			clean[j] = towlower(data[i]);
 			++j;
 		}
@@ -577,7 +578,7 @@ static long word_count(const wchar_t* buf) {
 	while (token) {
 		++num_words;
 		token = wcstok(NULL, L" ", &endptr);
-		printf("%ls\n", token);
+//		printf("%ls\n", token);
 	}
 
 	free(bufdup);
@@ -608,7 +609,7 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 	while (token) {
 		wchar_t *clean = clean_wstring(token);
 		words[i] = word_create(clean);
-		free(clean);
+//		free(clean);
 		++i;
 		token = wcstok(NULL, L" ", &endptr);
 	}
@@ -676,14 +677,14 @@ dict_t read_file_to_words(const char* filename) {
 	long filesize;
 
 	char *buf = read_file_to_buffer(fp, &filesize);
-	wchar_t *buf_mb = convert_to_wchar(buf, filesize);
+	wchar_t *wbuf = convert_to_wchar(buf, filesize);
 
 	free(buf);
 	fclose(fp);
 
-	long wc = word_count(buf_mb);
+	long wc = word_count(wbuf);
 	printf("number of words: %ld\n", wc);
-//	word_t *words = construct_word_list(buf, wc);
+	word_t *words = construct_word_list(wbuf, wc);
 
 //	d = dict_create(words, wc);
 
@@ -1252,14 +1253,8 @@ wchar_t *generate_random_poetname(dict_t *dict) {
 
 //fn main() {
 int main(int argc, char *argv[]) {
-	setlocale(LC_ALL, "fi_FI.UTF-8");
 
-	wchar_t asd[] = L"ÄÄÄÄÖÖLÄÖLÄLÖÄÖLÄ";
-
-	char *converted = convert_to_multibyte(asd, wcslen(asd));
-	printf("%s\n", converted);
-
-	return 1;
+	setlocale(LC_ALL, ""); // for whatever reason, this is needed. using fi_FI.UTF-8 doesn't work
 
 	dict_t dict = read_file_to_words("kalevala.txt");
 
@@ -1282,4 +1277,5 @@ int main(int argc, char *argv[]) {
 	printf("%ls\n", poem);
 	free(poem);
 
+	return 0;
 }
