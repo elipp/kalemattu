@@ -1,6 +1,6 @@
 [package]
 name = "kalemattu"
-version = "0.0.000001"
+version = "0.0.1"
 authors = ["toni pillu <toni@haistpaksa.com>"]
 
 [dependencies]
