@@ -10,6 +10,8 @@
 #include <wchar.h>
 #include <unistd.h>
 
+#include "distributions.h"
+
 typedef struct strvec_t {
 	wchar_t **strs;
 	int length;
@@ -600,8 +602,9 @@ static long word_count(const wchar_t* buf) {
 static char *read_file_to_buffer(FILE *fp, long *filesize_out) {
 
 	long size = get_filesize(fp);
-	char *buf = malloc(size*sizeof(char));
+	char *buf = malloc(size + 1);
 	fread(buf, 1, size, fp); 
+	buf[size] = '\0';
 
 	if (filesize_out) { *filesize_out = size; }
 	
@@ -635,9 +638,9 @@ word_t *construct_word_list(const wchar_t* buf, long num_words_in, long *num_wor
 
 }
 
-wchar_t *convert_to_wchar(const char* arg, long buffer_size) {
+wchar_t *convert_to_wchar(const char* arg, long num_chars) {
 
-	wchar_t *wc = malloc(buffer_size * sizeof(wchar_t)); // will waste some memory though
+	wchar_t *wc = malloc(num_chars * sizeof(wchar_t)); // will waste some memory though
 
 	mbstate_t state;
 	memset(&state, 0, sizeof(state));
@@ -645,7 +648,7 @@ wchar_t *convert_to_wchar(const char* arg, long buffer_size) {
 	printf("Using locale %s.\n", setlocale( LC_CTYPE, "" ));
 
 	size_t result;
-	result = mbsrtowcs(wc, &arg, buffer_size, &state);
+	result = mbsrtowcs(wc, &arg, num_chars, &state);
 
 	if (result == (size_t)-1) {
 	       	fputs("convert_to_wchar: encoding error :(", stderr);
@@ -833,16 +836,16 @@ wchar_t *get_random_syllable_any(dict_t *dict, bool ignore_last) {
 
 wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
-	wchar_t new_word[256]; // should be enough :D
-	memset(new_word, 0, sizeof(new_word));
+	wchar_t new_word[256];
+	new_word[0] = L'\0';
 
-	int num_syllables = 3; // get random blah balh	
+	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); // get random blah balh	
 
 	if (num_syllables == 1) {
 		while (1) {
 			word_t *w = get_random_word(dict);
 			double r = get_randomf();
-			if (w->syllables.length > 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
+			if (w->syllables.length == 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
 				return wcsdup(w->chars);
 			}
 		}
@@ -928,46 +931,52 @@ syl_t *get_syllable_with_lclass(sylvec_t *sv, char length_class) {
 	return &sv->syllables[0]; // TODO
 }
 
+int add_punctuation(wchar_t *buffer, bool last_verse, bool last_word) {
+	double r = get_randomf();
+
+	if (last_verse && last_word) {
+		if (r < 0.08) {
+			wcscat(buffer, L"!");
+		}
+		else if (r < 0.15) {
+			wcscat(buffer, L"?");
+		}
+		else if (r < 0.25) {
+			wcscat(buffer, L".");
+		}
+
+	} else {
+		if (r < 0.02) {
+			wcscat(buffer, L";");
+		} 
+		else if (r < 0.15) {
+			wcscat(buffer, L",");
+
+		} else if (r < 0.18) {
+			wcscat(buffer, L":");
+		}
+
+	}
+
+	if (!last_word) {
+		wcscat(buffer, L" ");
+	}
+
+	return 1;
+}
 
 wchar_t *generate_random_verse(dict_t *dict, long num_words, bool last_verse, kstate_t *state, foot_t *foot) {
 	wchar_t new_verse[2048];
-	memset(new_verse, 0, sizeof(new_verse));
+	new_verse[0] = L'\0';
 
-	for (int j = 0; j < num_words; ++j) {
+	for (int i = 0; i < num_words; ++i) {
 
 		wchar_t *new_word = construct_random_word(dict, 4, state->rules_apply);
 		wcscat(new_verse, new_word);
 		free(new_word);
 
-		double r = get_randomf();
-
-		if (last_verse && j == num_words - 1) {
-			if (r < 0.08) {
-				wcscat(new_verse, L"!");
-			}
-			else if (r < 0.15) {
-				wcscat(new_verse, L"?");
-			}
-			else if (r < 0.25) {
-				wcscat(new_verse, L".");
-			}
-
-		} else {
-			if (r < 0.02) {
-				wcscat(new_verse, L";");
-			} 
-			else if (r < 0.15) {
-				wcscat(new_verse, L",");
-		
-			} else if (r < 0.18) {
-				wcscat(new_verse, L":");
-			}
-
-		}
-
-		if (j < num_words - 1) {
-			wcscat(new_verse, L" ");
-		}
+		bool last_word = i >= num_words - 1;
+		add_punctuation(new_verse, last_verse, last_word);
 
 	}
 
@@ -1029,7 +1038,7 @@ wchar_t *generate_poem(dict_t *dict, kstate_t *state) {
 	printf("title: %ls\n", title);
 
 	wchar_t poem[8096];
-	memset(poem, 0, sizeof(poem));
+	poem[0] = L'\0';
 
 	if (state->LaTeX_output) {
 		wcscat(poem, L"\\poemtitle{");
@@ -1039,17 +1048,19 @@ wchar_t *generate_poem(dict_t *dict, kstate_t *state) {
 		wcscat(poem, L"\\begin{verse}[\\versewidth]\n");
 	} else {
 		wcscat(poem, title);
+		wcscat(poem, L"\n");
 	}
 
-	int num_stanzas = 3;
+	int num_stanzas = gauss_noise_with_limit(3, 1, 1, 4);
 
 	for (int i = 0; i < num_stanzas; ++i) {
 
-		int num_verses = 2;
+		int num_verses = gauss_noise_with_limit(4, 1, 1, 4);
 		wchar_t *new_stanza = generate_random_stanza(dict, num_verses, state);
 
 		wcscat(poem, new_stanza);
 		free(new_stanza);
+		wcscat(poem, L"\n");
 	}
 
 	if (state->LaTeX_output) {
@@ -1110,7 +1121,7 @@ void print_as_latex_document(const char* poem, const char *poetname) {
 wchar_t *generate_random_poetname(dict_t *dict) {
 
 	wchar_t name[128];
-	memset(name, 0, sizeof(name));
+	name[0] = L'\0';
 
 	wchar_t *first_name = capitalize_first_nodup(construct_random_word(dict, 3, true));
 	wchar_t *second_name = capitalize_first_nodup(construct_random_word(dict, 2, true));
@@ -1137,9 +1148,12 @@ int get_commandline_options(int argc, char **argv, kstate_t *state) {
 
 	opterr = 0;
 	int c;
-	while ((c = getopt (argc, argv, "ls:")) != -1) {
+	while ((c = getopt (argc, argv, "cls:")) != -1) {
 		switch (c)
 		{
+			case 'c':
+				state->rules_apply = 0;
+				break;
 			case 'l':
 				state->LaTeX_output = 1;
 				break;
@@ -1148,12 +1162,12 @@ int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				break;
 			case '?':
 				if (optopt == 's')
-					fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+					fprintf (stderr, "error: option -%c (seed) requires an argument.\n", optopt);
 				else if (isprint (optopt))
-					fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+					fprintf (stderr, "error: unknown option `-%c'.\n", optopt);
 				else
 					fprintf (stderr,
-							"Unknown option character `\\x%x'.\n",
+							"error: unknown option character `\\x%x'.\n",
 							optopt);
 				return 0;
 			default:
@@ -1196,7 +1210,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
 
 	wchar_t *poem = generate_poem(&dict, &state);
-	printf("%ls\n", poem);
+	printf("\n%ls\n", poem);
 	free(poem);
 
 	return 0;
