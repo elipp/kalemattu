@@ -122,8 +122,8 @@ char *get_vc_pattern_grep(const wchar_t* input) {
 
 	r[0] = '^';
 	strncpy(r + 1, vc, len);
-	vc[len] = '$';
-	vc[len+1] = '\0';
+	r[len] = '$';
+	r[len+1] = '\0';
 
 	free(vc);
 
@@ -548,7 +548,7 @@ void word_syllabify(word_t *word) {
 
 			if (offset > 0 && str_contains(pat, "VV") && (!has_diphthong(new_syl)) && (!has_double_vowel(new_syl))) {
 				size_t vv_offset = strstr(pat, "VV") - pat;
-				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
+//				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
 
 				wchar_t *p1 = get_subwstring(word->chars, offset, vv_offset + 1);
 				wchar_t *p2 = get_subwstring(word->chars, offset+vv_offset+1, plen - wcslen(p1));
