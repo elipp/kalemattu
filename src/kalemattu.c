@@ -8,6 +8,7 @@
 #include <locale.h>
 #include <wctype.h>
 #include <wchar.h>
+#include <unistd.h>
 
 typedef struct strvec_t {
 	wchar_t **strs;
@@ -219,17 +220,19 @@ wchar_t *wstring_concat_with_delim(const wchar_t* str1, const wchar_t* str2, con
 
 
 int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
+
+//	printf("sylvec_pushsyl: capacity = %lu, length = %lu, pushing %ls\n", s->capacity, s->length, syl->chars);
+
 	if (s->length < 1) {
 		s->capacity = 2;
 		s->syllables = malloc(s->capacity*sizeof(syl_t));
-		s->length = 1;
 	}
-	else if (s->length + 1 > s->capacity) {
+	else if (s->length >= s->capacity) {
 		s->capacity *= 2;
 		s->syllables = realloc(s->syllables, s->capacity*sizeof(syl_t));
-		s->length += 1;
 	}
 
+	s->length += 1;
 	s->syllables[s->length - 1] = *syl;
 
 	return 1;
@@ -238,7 +241,6 @@ int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
 
 int sylvec_pushstr(sylvec_t *s, const wchar_t *syl) {
 
-	printf("sylvec_pushstr: capacity = %lu, length = %lu\n", s->capacity, s->length);
 
 	char *vc = get_vc_pattern(syl);
 	const vcp_t *L = find_longest_vc_match(vc, 0);
@@ -352,8 +354,9 @@ wchar_t *clean_wstring(const wchar_t* data) {
 		++i;
 	}
 
+	if (j == 0) { free(clean); return NULL; }
+
 	clean[j] = L'\0';
-//	printf("clean_wstring: data = \"%ls\", ret = \"%ls\", j = %d\n", data, clean, j);
 	return clean;
 }
 
@@ -408,7 +411,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 				}
 
 				if (full_match && strlen(longest->pattern) < plen) {
-					printf("new longest matching pattern = %s (input %s, offset %ld)\n", current->pattern, vc, offset);
+//					printf("new longest matching pattern = %s (input %s, offset %ld)\n", current->pattern, vc, offset);
 					longest = current;
 				}
 			}
@@ -616,9 +619,11 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 
 	while (token) {
 		wchar_t *clean = clean_wstring(token);
-		words[i] = word_create(clean);
-		free(clean);
-		++i;
+		if (clean) {
+			words[i] = word_create(clean);
+			free(clean);
+			++i;
+		}
 		token = wcstok(NULL, L" ", &endptr);
 	}
 	
@@ -694,7 +699,12 @@ dict_t read_file_to_words(const char* filename) {
 	printf("number of words: %ld\n", wc);
 	word_t *words = construct_word_list(wbuf, wc);
 
-//	d = dict_create(words, wc);
+	d = dict_create(words, wc);
+
+//	for (int i = 0; i < d.num_words; ++i) {
+//		word_t *w = &d.words[i];
+//		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
+//	}
 
 	return d;
 	
@@ -792,7 +802,15 @@ bool ends_in_wrong_vowelcombo(const wchar_t *str) {
 }
 
 syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
-	long r = get_random(0, ignore_last ? w->syllables.length - 1 : w->syllables.length);
+	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
+	if (w->syllables.length == 1) { return &w->syllables.syllables[0]; }
+
+	long max;
+	if (ignore_last) max = w->syllables.length - 1;
+	else max = w->syllables.length;
+
+	long r = get_random(0, max);
+
 	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
 	return &w->syllables.syllables[r];	
 }
@@ -808,7 +826,6 @@ wchar_t *get_random_syllable_any(dict_t *dict, bool ignore_last) {
 	return wcsdup(s->chars);
 }
 
-//fn construct_random_word<'a>(word_list: &'a Vec<word_t>, rng: &mut StdRng, max_syllables: usize, rules_apply: bool) -> String {
 wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
 	wchar_t new_word[256]; // should be enough :D
@@ -1004,6 +1021,8 @@ wchar_t *generate_poem(dict_t *dict, kstate_t *state) {
 		title = new_title;
 	}
 
+	printf("title: %ls\n", title);
+
 	wchar_t poem[8096];
 	memset(poem, 0, sizeof(poem));
 
@@ -1108,6 +1127,49 @@ wchar_t *generate_random_poetname(dict_t *dict) {
 
 }
 
+int get_commandline_options(int argc, char **argv, kstate_t *state) {
+	char *endptr;
+
+	opterr = 0;
+	int c;
+	while ((c = getopt (argc, argv, "ls:")) != -1) {
+		switch (c)
+		{
+			case 'l':
+				state->LaTeX_output = 1;
+				break;
+			case 's':
+				state->numeric_seed = strtol(optarg, &endptr, 10);
+				break;
+			case '?':
+				if (optopt == 's')
+					fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+				else if (isprint (optopt))
+					fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+				else
+					fprintf (stderr,
+							"Unknown option character `\\x%x'.\n",
+							optopt);
+				return 0;
+			default:
+				abort ();
+		}
+	}
+
+	return 1;
+
+}
+
+kstate_t get_default_state() {
+	kstate_t defaults;
+
+	defaults.numeric_seed = 0;
+	defaults.LaTeX_output = 0;
+	defaults.rules_apply = 1;
+
+	return defaults;
+}
+
 //fn main() {
 int main(int argc, char *argv[]) {
 
@@ -1120,15 +1182,13 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	unsigned int seed = time(NULL);
+	kstate_t state = get_default_state();
+	get_commandline_options(argc, argv, &state);
+
+	unsigned int seed = state.numeric_seed != 0 ? state.numeric_seed : time(NULL);
 	srand(seed);
 
-	printf("(info: using %u as random seed)\n\n", seed);
-
-	kstate_t state;
-	state.numeric_seed = seed;
-	state.LaTeX_output = 0;
-	state.rules_apply = 1;
+	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
 
 	wchar_t *poem = generate_poem(&dict, &state);
 	printf("%ls\n", poem);
