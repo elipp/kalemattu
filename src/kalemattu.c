@@ -111,7 +111,7 @@ char *get_vc_pattern(const wchar_t* input) {
 
 	vc[len] = '\0';
 
-	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
+//	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
 	return vc;
 }
 
@@ -404,7 +404,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 				if ((vclen - offset) > plen) {
 					if (current->pattern[plen-1] == 'C') {
 						if (vc[plen+offset] == 'V') {
-							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
+//							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
 							full_match = false;
 						}
 					}
@@ -608,9 +608,9 @@ static char *read_file_to_buffer(FILE *fp, long *filesize_out) {
 	return buf;
 }
 
-word_t *construct_word_list(const wchar_t* buf, long num_words) {
+word_t *construct_word_list(const wchar_t* buf, long num_words_in, long *num_words_out) {
 
-	word_t *words = malloc(num_words * sizeof(word_t));
+	word_t *words = malloc(num_words_in * sizeof(word_t));
 
 	wchar_t *bufdup = wcsdup(buf);
 	wchar_t *endptr;
@@ -626,7 +626,11 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 		}
 		token = wcstok(NULL, L" ", &endptr);
 	}
-	
+
+	words = realloc(words, i*sizeof(word_t));
+
+	*num_words_out = i;
+
 	return words;
 
 }
@@ -696,15 +700,16 @@ dict_t read_file_to_words(const char* filename) {
 	fclose(fp);
 
 	long wc = word_count(wbuf);
+	long wc_actual = 0;
 	printf("number of words: %ld\n", wc);
-	word_t *words = construct_word_list(wbuf, wc);
+	word_t *words = construct_word_list(wbuf, wc, &wc_actual);
 
-	d = dict_create(words, wc);
+	d = dict_create(words, wc_actual);
 
-//	for (int i = 0; i < d.num_words; ++i) {
-//		word_t *w = &d.words[i];
-//		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
-//	}
+	for (int i = 0; i < d.num_words; ++i) {
+		word_t *w = &d.words[i];
+		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
+	}
 
 	return d;
 	
