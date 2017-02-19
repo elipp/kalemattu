@@ -96,6 +96,7 @@ wchar_t *get_subwstring(const wchar_t *input, size_t offset, size_t n) {
 
 	wmemcpy(r, input + offset, n);
 	r[n] = L'\0';
+//	printf("get_subwstring: input: %ls, offset: %lu, n: %lu -> r = %ls\n", input, offset, n, r);
 
 	return r;
 }
@@ -183,10 +184,15 @@ wchar_t *wstring_concat(const wchar_t* str1, const wchar_t* str2) {
 	size_t l1 = wcslen(str1);
 	size_t l2 = wcslen(str2);
 
-	wchar_t *buf = malloc((l1 + l2 + 1)*sizeof(wchar_t));
+	size_t combined = l1+l2;
+	size_t bufsize_bytes = (combined+1)*sizeof(wchar_t);
+
+	wchar_t *buf = malloc(bufsize_bytes);
+	buf[0] = L'\0';
 
 	wcscat(buf, str1);
 	wcscat(buf, str2);
+	buf[combined] = L'\0';
 
 	return buf;
 
@@ -285,6 +291,8 @@ word_t word_create(const wchar_t* chars) {
 	word_t w;
 	w.chars = wcsdup(chars);
 	w.length = wcslen(chars);
+	w.chars[w.length] = L'\0';
+
 	w.syllables = sylvec_create();
 	word_syllabify(&w);
 
@@ -334,7 +342,7 @@ char *clean_string(const char* data) {
 wchar_t *clean_wstring(const wchar_t* data) {
 
 	size_t len = wcslen(data);
-	wchar_t *clean = malloc(len*sizeof(wchar_t)); // this will waste a little bit of memory
+	wchar_t *clean = malloc((len+1)*sizeof(wchar_t)); // this will waste a little bit of memory
 	int i = 0, j = 0;
 	while (i < len) {
 		if (iswalpha(data[i])) {
@@ -345,7 +353,7 @@ wchar_t *clean_wstring(const wchar_t* data) {
 	}
 
 	clean[j] = L'\0';
-	printf("clean_string: data = \"%ls\", ret = \"%ls\", j = %d\n", data, clean, j);
+//	printf("clean_wstring: data = \"%ls\", ret = \"%ls\", j = %d\n", data, clean, j);
 	return clean;
 }
 
@@ -609,7 +617,7 @@ word_t *construct_word_list(const wchar_t* buf, long num_words) {
 	while (token) {
 		wchar_t *clean = clean_wstring(token);
 		words[i] = word_create(clean);
-//		free(clean);
+		free(clean);
 		++i;
 		token = wcstok(NULL, L" ", &endptr);
 	}
