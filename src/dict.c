@@ -35,7 +35,6 @@ static long word_count(const wchar_t* buf) {
 	return num_words;
 }
 
-
 strvec_t strvec_create() {
 	strvec_t s;
 	memset(&s, 0, sizeof(s));
@@ -62,7 +61,7 @@ int strvec_push(strvec_t* vec, const wchar_t* str) {
 	return 1;
 }
 
-syl_t syl_create(const wchar_t* syl, char length_class) {
+static syl_t syl_create(const wchar_t* syl, char length_class) {
 	syl_t s;
 	s.chars = wcsdup(syl);
 	s.length = wcslen(syl);
@@ -120,7 +119,6 @@ int sylvec_pushstr(sylvec_t *s, const wchar_t *syl) {
 
 }
 
-
 int sylvec_push_slice(sylvec_t *s, const sylvec_t *in) {
 	for (long i = 0; i < in->length; ++i) {
 		sylvec_pushsyl(s, &in->syllables[i]);
@@ -130,6 +128,7 @@ int sylvec_push_slice(sylvec_t *s, const sylvec_t *in) {
 }
 
 wchar_t *sylvec_get_word(sylvec_t *s) {
+
 	long total_length = 0;
 	for (int i = 0; i < s->length; ++i) {
 		total_length += s->syllables[i].length;
@@ -196,8 +195,7 @@ static void word_syllabify(word_t *word) {
 
 }
 
-
-word_t word_create(const wchar_t* chars) {
+static word_t word_create(const wchar_t* chars) {
 	word_t w;
 	w.chars = wcsdup(chars);
 	w.length = wcslen(chars);
@@ -209,7 +207,7 @@ word_t word_create(const wchar_t* chars) {
 	return w;
 }
 
-dict_t dict_create(word_t *words, long num_words) {
+static dict_t dict_create(word_t *words, long num_words) {
 	dict_t d;
 	d.words = words;
 	d.num_words = num_words;
@@ -217,18 +215,27 @@ dict_t dict_create(word_t *words, long num_words) {
 	return d;
 }
 
-sylvec_t compile_list_of_syllables(dict_t *dict) {
-	sylvec_t s;
-	memset(&s, 0, sizeof(s));
-
-	for (long i = 0; i < dict->num_words; ++i) {
-		sylvec_push_slice(&s, &dict->words[i].syllables);
-	}
-
-	return s;
+syl_t *sylvec_get_random(sylvec_t *sv) {
+	return &sv->syllables[get_random(0, sv->length - 1)];
 }
 
-word_t *construct_word_list(const wchar_t* buf, long num_words_in, long *num_words_out) {
+syl_t *sylvec_get_random_with_lclass(sylvec_t *sv, char length_class) {
+	return &sv->syllables[0]; // TODO
+}
+
+
+//static sylvec_t compile_list_of_syllables(dict_t *dict) {
+//	sylvec_t s;
+//	memset(&s, 0, sizeof(s));
+//
+//	for (long i = 0; i < dict->num_words; ++i) {
+//		sylvec_push_slice(&s, &dict->words[i].syllables);
+//	}
+//
+//	return s;
+//}
+//
+static word_t *construct_word_list(const wchar_t* buf, long num_words_in, long *num_words_out) {
 
 	word_t *words = malloc(num_words_in * sizeof(word_t));
 
@@ -307,7 +314,7 @@ word_t *get_random_word(dict_t *dict) {
 	return &dict->words[get_random(0, dict->num_words)];
 }
 
-syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
+static syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 //	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
 	if (w->syllables.length == 1) { return &w->syllables.syllables[0]; }
 

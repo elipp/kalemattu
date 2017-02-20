@@ -46,9 +46,14 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 			case 'l':
 				state->LaTeX_output = 1;
 				break;
-			case 'n':
+			case 'n': {
+				size_t len = strlen(optarg);
 				state->numeric_seed = strtol(optarg, &endptr, 10);
+				if (endptr < optarg+len) {
+					fprintf(stderr, "(option -n: strtol: warning: the argument string \"%s\" couldn't be fully converted!)\n", optarg); 
+				}
 				break;
+			}
 			case 's':
 				state->numeric_seed = hash((unsigned char*)optarg);
 				break;
@@ -122,7 +127,7 @@ int main(int argc, char *argv[]) {
 	pthread_t thread_id;
 	if (state.irc_enabled) {
 		running = 1;
-		thread_id = start_irc_thread("open.ircnet.net", "DUMUII", "du mu mU"); 
+		thread_id = start_irc_thread();
 		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
 	}
 

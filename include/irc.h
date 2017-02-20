@@ -4,6 +4,16 @@
 #include <pthread.h>
 #include <libircclient/libircclient.h>
 
-pthread_t start_irc_thread(const char* servaddr, const char *botname, const char* realname);
+typedef struct irc_settings_t {
+	const char* servaddr;
+	const char* botname;
+	const char* realname;
+	const char** channels;
+	int num_channels;
+
+} irc_settings_t;
+
+int irc_connection_setup(const char* servaddr, const char* botname, const char* username, const char* realname, const char** channels, int num_channels);
+pthread_t start_irc_thread();
 
 #endif

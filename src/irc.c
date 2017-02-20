@@ -27,19 +27,23 @@ static void event_numeric_callback(irc_session_t *session, unsigned int event, c
 
 }
 
-
-
-typedef struct connection_settings_t {
-	const char* servaddr;
-	const char* botname;
-	const char* realname;
-	const char** channels;
-	int num_channels;
-
-} connection_settings_t;
-
 static irc_session_t *irc_session;
-static connection_settings_t connection_settings;
+static irc_settings_t irc_settings;
+
+static int irc_settings_exist = 0;
+
+int irc_connection_setup(const char* servaddr, const char* botname, const char* username, const char* realname, const char** channels, int num_channels) {
+	irc_settings.servaddr = strdup(servaddr);
+	irc_settings.botname = strdup(botname);
+	irc_settings.username= strdup(username);
+	irc_settings.realname = strdup(realname);
+	irc_settings.channels = malloc(num_channels * sizeof(const char*));
+	for (int i = 0; i < num_channels; ++i) {
+		irc_settings.channels[i] = strdup(channels[i]);
+	}
+
+	irc_settings_exist = 1;
+}
 
 static void *run_irc(void *arg) {
 
@@ -81,11 +85,12 @@ static void *run_irc(void *arg) {
 	return arg;
 }
 
-pthread_t start_irc_thread(const char* servaddr, const char *botname, const char* realname) {
+pthread_t start_irc_thread() {
 
-	connection_settings.servaddr = servaddr;
-	connection_settings.botname = botname;
-	connection_settings.realname = realname;
+	if (!irc_settings_exist) { 
+		fprintf(stderr, "start_irc_thread(): irc settings haven't been set up!\n");
+		return 0; 
+	}
 
 	pthread_t thread_id;
 	int e = pthread_create(&thread_id, NULL, &run_irc, NULL);
