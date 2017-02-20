@@ -34,3 +34,13 @@ double gauss_noise_with_limit(double mu, double sigma, double min, double max) {
 
 	return r;
 }
+
+long get_random(long min, long max) {
+	return rand() % max + min;
+}
+
+double get_randomf() {
+	return (double)rand() / (double)RAND_MAX;
+}
+
+
