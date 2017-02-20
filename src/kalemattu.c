@@ -9,8 +9,13 @@
 #include <wctype.h>
 #include <wchar.h>
 #include <unistd.h>
+#include <pthread.h>
+
+#include <libircclient/libircclient.h>
+#include <libircclient/libirc_rfcnumeric.h>
 
 #include "distributions.h"
+#include "irc.h"
 
 typedef struct strvec_t {
 	wchar_t **strs;
@@ -709,10 +714,10 @@ dict_t read_file_to_words(const char* filename) {
 
 	d = dict_create(words, wc_actual);
 
-	for (int i = 0; i < d.num_words; ++i) {
-		word_t *w = &d.words[i];
-		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
-	}
+//	for (int i = 0; i < d.num_words; ++i) {
+//		word_t *w = &d.words[i];
+//		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
+//	}
 
 	return d;
 	
@@ -810,7 +815,7 @@ bool ends_in_wrong_vowelcombo(const wchar_t *str) {
 }
 
 syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
-	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
+//	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
 	if (w->syllables.length == 1) { return &w->syllables.syllables[0]; }
 
 	long max;
@@ -819,7 +824,7 @@ syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 
 	long r = get_random(0, max);
 
-	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
+//	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
 	return &w->syllables.syllables[r];	
 }
 
@@ -839,7 +844,7 @@ wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_appl
 	wchar_t new_word[256];
 	new_word[0] = L'\0';
 
-	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); // get random blah balh	
+	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); 
 
 	if (num_syllables == 1) {
 		while (1) {
@@ -1189,7 +1194,8 @@ kstate_t get_default_state() {
 	return defaults;
 }
 
-//fn main() {
+static int running = 1;
+
 int main(int argc, char *argv[]) {
 
 	setlocale(LC_ALL, ""); // for whatever reason, this is needed. using fi_FI.UTF-8 doesn't work
@@ -1212,6 +1218,13 @@ int main(int argc, char *argv[]) {
 	wchar_t *poem = generate_poem(&dict, &state);
 	printf("\n%ls\n", poem);
 	free(poem);
+
+	pthread_t thread_id = start_irc_thread("open.ircnet.net", "DUMUII", "du mu mU"); 
+	fprintf(stderr, "irc thread id: %lu\n", thread_id);
+
+	while (running) {
+		usleep(1000000);
+	}
 
 	return 0;
 }
