@@ -11,6 +11,21 @@
 #include "stringutil.h"
 #include "aesthetics.h"
 
+static word_t *get_single_syllable_word(dict_t *dict) {
+
+	word_t *w = get_random_word(dict);
+	double r = get_randomf();
+
+	while (1) {
+		if (w->syllables.length == 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
+			break;
+		}
+		w = get_random_word(dict);
+	}
+	return w;
+
+}
+
 static wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rules_apply) {
 
 	wchar_t new_word[256];
@@ -19,20 +34,14 @@ static wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rul
 	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); 
 
 	if (num_syllables == 1) {
-		while (1) {
-			word_t *w = get_random_word(dict);
-			double r = get_randomf();
-			if (w->syllables.length == 1 || w->length <= 4 || (r < 0.20 && w->length <= 5)) {
-				return wcsdup(w->chars);
-			}
-		}
-	} else {
-		if (rules_apply) {
-			make_valid_word(dict, new_word, num_syllables);
-		}
-		else {
-			make_any_word(dict, new_word, num_syllables);
-		}
+		return wcsdup(get_single_syllable_word(dict)->chars);
+	} 
+	
+	if (rules_apply) {
+		make_valid_word(dict, new_word, num_syllables);
+	}
+	else {
+		make_any_word(dict, new_word, num_syllables);
 	}
 
 	if (wcslen(new_word) < 2) {
@@ -64,8 +73,8 @@ static int add_punctuation(wchar_t *buffer, bool last_verse, bool last_word) {
 		} 
 		else if (r < 0.15) {
 			wcscat(buffer, L",");
-
-		} else if (r < 0.18) {
+		} 
+		else if (r < 0.18) {
 			wcscat(buffer, L":");
 		}
 
@@ -88,7 +97,7 @@ static wchar_t *generate_random_verse(dict_t *dict, long num_words, bool last_ve
 		wcscat(new_verse, new_word);
 		free(new_word);
 
-		bool last_word = i >= num_words - 1;
+		bool last_word = i == num_words - 1;
 		add_punctuation(new_verse, last_verse, last_word);
 
 	}
@@ -103,7 +112,7 @@ static wchar_t *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *
 	memset(new_stanza, 0, sizeof(new_stanza));
 	for (int i = 0; i < num_verses; ++i) {
 		wcscat(new_stanza, L"\n");
-		wchar_t *new_verse = generate_random_verse(dict, 4, false, state, NULL);
+		wchar_t *new_verse = generate_random_verse(dict, 4, i == num_verses - 1, state, NULL);
 		wcscat(new_stanza, new_verse);
 
 		if (state->LaTeX_output) {
@@ -111,7 +120,6 @@ static wchar_t *generate_random_stanza(dict_t *dict, long num_verses, kstate_t *
 		}
 
 		free(new_verse);
-		i = i + 1;
 	}
 
 	if (state->LaTeX_output) { 

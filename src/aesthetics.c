@@ -108,7 +108,7 @@ bool has_forbidden_ccombos(const wchar_t* input) {
 static const wchar_t *FORBIDDEN_ENDCONSONANTS = L"pkrmhvsl";
 
 bool has_forbidden_endconsonant(const wchar_t *input) {
-	char l = input[wcslen(input)-1];
+	wchar_t l = input[wcslen(input)-1];
 	size_t i = 0;
 
 	while (i < sizeof(FORBIDDEN_ENDCONSONANTS)) {
@@ -158,21 +158,27 @@ L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"
 };
 
 bool ends_in_wrong_vowelcombo(const wchar_t *str) {
-	const char* vcp = get_vc_pattern_grep(str);
 
-	if (strstr("VV$", vcp)) {
+	char* vcp = get_vc_pattern_grep(str);
+	bool wrong = false;
+
+	if (strstr(vcp, "VV$")) {
+
 		wchar_t *substr = get_subwstring(str, wcslen(str) - 2, 2);
-		const wchar_t **f = &FORBIDDEN_VOWELENDINGS[0];
+		const wchar_t **f = FORBIDDEN_VOWELENDINGS;
 
-		while (f) {
-			if (wcsncmp(*f, substr, 2) == 0) { return true; }
+		while (*f) {
+			if (wcsncmp(*f, substr, 2) == 0) { 
+				wrong = true; 
+				break; 
+			}
 			++f;
 		}
 
 		free(substr);
 	}
-
-	return false;
+	free(vcp);
+	return wrong;
 }
 
 static const wchar_t *vowels = L"aeiouyäöå";
@@ -207,8 +213,8 @@ char *get_vc_pattern_grep(const wchar_t* input) {
 
 	r[0] = '^';
 	strncpy(r + 1, vc, len);
-	r[len] = '$';
-	r[len+1] = '\0';
+	r[len+1] = '$';
+	r[len+2] = '\0';
 
 	free(vc);
 
@@ -296,6 +302,7 @@ int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 				goto new_syllable;
 			}
 			else if ((n == num_syllables - 1) && (has_forbidden_endconsonant(s) || ends_in_wrong_vowelcombo(s))) {
+				//fprintf(stderr, "elseif forbidden_endc/ends in wrong vowelc %ls\n", concatd);
 				goto new_syllable;
 			}
 			else if (first_c && first_c == prev_first_c) {
@@ -335,4 +342,6 @@ int make_any_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 		const syl_t *syl = get_random_syllable_any(dict, false);
 		wcscat(buffer, syl->chars);
 	}
+
+	return 1;
 }
