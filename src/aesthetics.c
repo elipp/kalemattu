@@ -3,6 +3,7 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "types.h"
 #include "aesthetics.h"
@@ -259,22 +260,25 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 }
 
-int get_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
+int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 
 	int vharm_state = 0;
 	wchar_t prev_first_c = L'\0';
 
 	sylvec_t new_syllables = sylvec_create();
-	const syl_t *syl = get_random_syllable_any(dict, true);
-	const wchar_t *s = syl->chars;
 
 	for (int n = 0; n < num_syllables; ++n) {
 		bool ignore_last = (n == 0);
 
+		const syl_t *syl = get_random_syllable_any(dict, ignore_last);
+		const wchar_t *s = syl->chars;
+
+		int syl_vharm = get_vowel_harmony_state(s);
+
 		while (1) {
-			int syl_vharm = get_vowel_harmony_state(s);
 			wchar_t first_c = get_first_consonant(s);
 			wchar_t *concatd = wstring_concat(buffer, s);
+			syl_vharm = get_vowel_harmony_state(s);
 
 			if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
 				goto new_syllable;
@@ -303,19 +307,18 @@ int get_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 				break;
 			}
 
-			if (vharm_state == 0) {
-				// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
-				if (syl_vharm > 0) {
-					vharm_state = syl_vharm;
-				}
-			}
-
-
 new_syllable:
 			syl = get_random_syllable_any(dict, ignore_last);
+			s = syl->chars;
 
 			free(concatd);
 
+		}
+		if (vharm_state == 0) {
+			// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
+			if (syl_vharm > 0) {
+				vharm_state = syl_vharm;
+			}
 		}
 
 		sylvec_pushstr(&new_syllables, s);
@@ -325,4 +328,11 @@ new_syllable:
 
 	return 1;
 
+}
+
+int make_any_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
+	for (int i = 0; i < num_syllables; ++i) {
+		const syl_t *syl = get_random_syllable_any(dict, false);
+		wcscat(buffer, syl->chars);
+	}
 }

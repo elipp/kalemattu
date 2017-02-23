@@ -28,7 +28,8 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
 wchar_t get_first_consonant(const wchar_t *str);
 
-int get_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables);
+int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables);
+int make_any_word(dict_t *dict, wchar_t *buffer, long num_syllables);
 
 bool has_diphthong(const wchar_t* syllable); 
 bool has_double_vowel(const wchar_t* syllable);

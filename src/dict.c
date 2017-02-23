@@ -79,7 +79,9 @@ sylvec_t sylvec_create() {
 
 int sylvec_contains(sylvec_t *s, const wchar_t *str) {
 	for (int i = 0; i < s->length; ++i) {
-		if (wcscmp(s->syllables[i].chars, str) == 0) return 1;
+		if (wcscmp(s->syllables[i].chars, str) == 0) {
+			return 1;
+		}
 	}
 
 	return 0;

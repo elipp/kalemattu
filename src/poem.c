@@ -27,7 +27,12 @@ static wchar_t *construct_random_word(dict_t *dict, long max_syllables, bool rul
 			}
 		}
 	} else {
-		
+		if (rules_apply) {
+			make_valid_word(dict, new_word, num_syllables);
+		}
+		else {
+			make_any_word(dict, new_word, num_syllables);
+		}
 	}
 
 	if (wcslen(new_word) < 2) {

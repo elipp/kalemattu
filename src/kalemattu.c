@@ -126,6 +126,8 @@ int main(int argc, char *argv[]) {
 
 	pthread_t thread_id;
 	if (state.irc_enabled) {
+		const char *channels[] = { "#dumuIItest" };
+		irc_connection_setup("open.ircnet.net", "DUMUII", "gallentau", "seka s tibetiel", channels, 1);
 		running = 1;
 		thread_id = start_irc_thread();
 		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
