@@ -266,7 +266,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 }
 
-int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
+int make_valid_word(wchar_t *buffer, long num_syllables) {
 
 	int vharm_state = 0;
 	wchar_t prev_first_c = L'\0';
@@ -276,7 +276,7 @@ int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 	for (int n = 0; n < num_syllables; ++n) {
 		bool ignore_last = (n == 0);
 
-		const syl_t *syl = get_random_syllable_any(dict, ignore_last);
+		const syl_t *syl = dict_get_random_syllable_any(ignore_last);
 		const wchar_t *s = syl->chars;
 
 		int syl_vharm = get_vowel_harmony_state(s);
@@ -315,7 +315,7 @@ int make_valid_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
 			}
 
 new_syllable:
-			syl = get_random_syllable_any(dict, ignore_last);
+			syl = dict_get_random_syllable_any(ignore_last);
 			s = syl->chars;
 
 			free(concatd);
@@ -337,9 +337,9 @@ new_syllable:
 
 }
 
-int make_any_word(dict_t *dict, wchar_t *buffer, long num_syllables) {
+int make_any_word(wchar_t *buffer, long num_syllables) {
 	for (int i = 0; i < num_syllables; ++i) {
-		const syl_t *syl = get_random_syllable_any(dict, false);
+		const syl_t *syl = dict_get_random_syllable_any(false);
 		wcscat(buffer, syl->chars);
 	}
 

@@ -105,9 +105,7 @@ int main(int argc, char *argv[]) {
 
 	setlocale(LC_ALL, ""); // for whatever reason, this is needed. using fi_FI.UTF-8 doesn't work
 
-	dict_t dict = read_file_to_words("kalevala.txt");
-
-	if (dict.num_words < 1) {
+	if (!read_file_to_words("kalevala.txt")) {
 		fprintf(stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!\n");
 		return 1;
 	}
@@ -120,19 +118,22 @@ int main(int argc, char *argv[]) {
 
 	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
 
-	wchar_t *poem = generate_poem(&dict, &state);
-	printf("\n%ls\n", poem);
-	free(poem);
-
 	pthread_t thread_id;
+
 	if (state.irc_enabled) {
+
 		const char *channels[] = { "#dumuIItest" };
 		irc_connection_setup("open.ircnet.net", "DUMUII", "gallentau", "Seka S. Tibetiel", channels, 1);
 		running = 1;
 		thread_id = start_irc_thread();
 		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
 	} 
+
 	else {
+		wchar_t *poem = generate_poem(&state);
+		printf("\n%ls\n", poem);
+		free(poem);
+
 		running = 0;
 	}
 

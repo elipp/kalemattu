@@ -8,6 +8,8 @@
 #include "aesthetics.h"
 #include "distributions.h"
 
+static dict_t dictionary;
+
 static long get_filesize(FILE *fp) {
 	fseek(fp, 0L, SEEK_END);
 	long size = ftell(fp);
@@ -276,16 +278,13 @@ static char *read_file_to_buffer(FILE *fp, long *filesize_out) {
 	return buf;
 }
 
-dict_t read_file_to_words(const char* filename) {
-
-	dict_t d;
-	memset(&d, 0, sizeof(d));
+int read_file_to_words(const char* filename) {
 
 	FILE *fp = fopen(filename, "r");
 
 	if (!fp) {
 		fprintf(stderr, "error: Couldn't open file %s\n", filename);
-		return d;
+		return 0;
 	}
 
 	long filesize;
@@ -301,22 +300,21 @@ dict_t read_file_to_words(const char* filename) {
 	printf("number of words: %ld\n", wc);
 	word_t *words = construct_word_list(wbuf, wc, &wc_actual);
 
-	d = dict_create(words, wc_actual);
+	dictionary = dict_create(words, wc_actual);
 
 //	for (int i = 0; i < d.num_words; ++i) {
 //		word_t *w = &d.words[i];
 //		printf("%ls, length = %lu, num_syllables = %lu\n", w->chars, w->length, w->syllables.length);
 //	}
 
-	return d;
-	
+	return 1;
 }
 
-word_t *get_random_word(dict_t *dict) {
-	return &dict->words[get_random(0, dict->num_words)];
+const word_t *dict_get_random_word() {
+	return &dictionary.words[get_random(0, dictionary.num_words)];
 }
 
-static syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
+static syl_t *get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 //	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
 	if (w->syllables.length == 1) { return &w->syllables.syllables[0]; }
 
@@ -330,15 +328,17 @@ static syl_t *get_random_syllable_from_word(word_t *w, bool ignore_last) {
 	return &w->syllables.syllables[r];	
 }
 
-const syl_t *get_random_syllable_any(dict_t *dict, bool ignore_last) {
-	word_t *w = get_random_word(dict);
+const syl_t *dict_get_random_syllable_any(bool ignore_last) {
+	const word_t *w = dict_get_random_word();
 	while (w->syllables.length == 1) {
-		w = get_random_word(dict);
+		w = dict_get_random_word();
 	}
 
 	syl_t *s = get_random_syllable_from_word(w, ignore_last);
 
 	return s;
 }
+
+const dict_t *get_dictionary() { return &dictionary; }
 
 

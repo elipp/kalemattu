@@ -30,6 +30,10 @@ static void event_channel_callback(irc_session_t *session, const char *event, co
 
 	fprintf(stderr, "event: %s, channel: %s: message: %s\n", event, params[0], params[1]);
 
+	if (strstr(params[1], "!poem")) {
+		wchar_t *poem = generate_poem;
+	}
+
 }
 static void event_numeric_callback(irc_session_t *session, unsigned int event, const char *origin, const char **params, unsigned int count) {
 //	fprintf(stderr, "event: %u, origin: %s\n", event, origin);
@@ -38,16 +42,18 @@ static void event_numeric_callback(irc_session_t *session, unsigned int event, c
 
 
 int irc_connection_setup(const char* servaddr, const char* botnick, const char* username, const char* realname, const char** channels, int num_channels) {
+
 	irc_settings.servaddr = strdup(servaddr);
 	irc_settings.botnick = strdup(botnick);
 	irc_settings.username = strdup(username);
 	irc_settings.realname = strdup(realname);
 	irc_settings.channels = malloc(num_channels * sizeof(const char*));
+
 	for (int i = 0; i < num_channels; ++i) {
 		irc_settings.channels[i] = strdup(channels[i]);
 	}
-	irc_settings.num_channels = num_channels;
 
+	irc_settings.num_channels = num_channels;
 	irc_settings_exist = 1;
 
 	return 1;
