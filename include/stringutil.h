@@ -2,6 +2,7 @@
 #define STRINGUTIL_H
 
 #include <wchar.h>
+#include <stdbool.h>
 
 char *get_substring(const char* input, size_t offset, size_t n);
 wchar_t *get_subwstring(const wchar_t *input, size_t offset, size_t n);
@@ -26,5 +27,7 @@ int str_hasanyof(const wchar_t* str, const wchar_t* chars);
 
 wchar_t *capitalize_first_nodup(wchar_t *str);
 wchar_t *capitalize_first_dup(wchar_t *str);
+
+char* const* tokenize(const char* input, const char *delims, long *num_tokens_out);
 
 #endif

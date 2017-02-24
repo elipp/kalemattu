@@ -17,7 +17,8 @@ typedef struct kstate_t {
 	int LaTeX_output;
 	int rules_apply;
 	int irc_enabled;
-	const char* irc_channel;
+	char* const* irc_channels;
+	long num_irc_channels;
 } kstate_t;
 
 typedef struct syl_t {
@@ -47,5 +48,12 @@ typedef struct foot_t {
     char **spats; // "syllable patterns" :D
     long num_spats;
 } foot_t;
+
+typedef struct poem_t {
+	wchar_t *title;
+	wchar_t **stanzas;
+	long num_stanzas;
+
+} poem_t;
 
 #endif

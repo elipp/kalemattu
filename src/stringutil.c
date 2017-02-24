@@ -188,3 +188,32 @@ wchar_t *capitalize_first_dup(wchar_t *str) {
 	return dup;
 }
 
+char* const* tokenize(const char* input, const char *delims, long *num_tokens_out) {
+	char *dup = strdup(input);
+	char *endptr;
+
+	char *token = strtok_r(dup, delims, &endptr);
+	long num_tokens = 0;
+	size_t size = 16; // just guessing
+	char **ret = malloc(size*sizeof(char*));
+
+	while (token) {
+		if (num_tokens >= size) {
+			size *= 2;
+			ret = realloc(ret, size*sizeof(char*));
+		}
+		ret[num_tokens] = strdup(token);
+		++num_tokens;
+		token = strtok_r(NULL, delims, &endptr);
+	}
+
+	if (num_tokens < size) {
+		// shrink
+		ret = realloc(ret, num_tokens*sizeof(char*));
+	}
+
+	*num_tokens_out = num_tokens;
+	free(dup);
+
+	return ret;
+}

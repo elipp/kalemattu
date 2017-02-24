@@ -1,7 +1,13 @@
-#include "irc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
+
+#include "poem.h"
+#include "irc.h"
+#include "types.h"
+#include "stringutil.h"
 
 static irc_session_t *irc_session;
 static irc_settings_t irc_settings;
@@ -26,12 +32,54 @@ static void event_connect_callback(irc_session_t *session, const char *event, co
 
 }
 
+static void send_multiline_message(const char *msg, const char* channel) {
+	char *dup = strdup(msg);
+	char *endptr;
+	char *token = strtok_r(dup, " ", &endptr);
+	while (token) {
+		irc_cmd_msg(irc_session, channel, token);
+		token = strtok_r(NULL, "\n", &endptr);
+	}
+}
+
+static void send_poem_to_channel(const poem_t *poem, const char* channel) {
+	char *converted = convert_to_multibyte(poem->title, wcslen(poem->title));
+	irc_cmd_msg(irc_session, channel, converted);
+	irc_cmd_msg(irc_session, channel, " ");
+	free(converted);
+
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		converted = convert_to_multibyte(poem->stanzas[i], wcslen(poem->stanzas[i]));
+		send_multiline_message(converted, channel);
+		irc_cmd_msg(irc_session, channel, " ");
+		free(converted);
+	}
+}
+
 static void event_channel_callback(irc_session_t *session, const char *event, const char *origin, const char **params, unsigned int count) {
 
 	fprintf(stderr, "event: %s, channel: %s: message: %s\n", event, params[0], params[1]);
 
-	if (strstr(params[1], "!poem")) {
-		wchar_t *poem = generate_poem;
+	if (strstr(params[1], "!poem") == params[1]) {
+		kstate_t s;
+		memset(&s, 0, sizeof(s));
+		s.rules_apply = 1;
+		poem_t poem = generate_poem(&s);
+
+		send_poem_to_channel(&poem, params[0]);
+
+		poem_free(&poem);
+	}
+	else if (strstr(params[1], "!boem") == params[1]) {
+		kstate_t s;
+		memset(&s, 0, sizeof(s));
+		s.rules_apply = 0;
+
+		poem_t poem = generate_poem(&s);
+
+		send_poem_to_channel(&poem, params[0]);
+
+		poem_free(&poem);
 	}
 
 }
@@ -41,7 +89,7 @@ static void event_numeric_callback(irc_session_t *session, unsigned int event, c
 }
 
 
-int irc_connection_setup(const char* servaddr, const char* botnick, const char* username, const char* realname, const char** channels, int num_channels) {
+int irc_connection_setup(const char* servaddr, const char* botnick, const char* username, const char* realname, char* const* channels, int num_channels) {
 
 	irc_settings.servaddr = strdup(servaddr);
 	irc_settings.botnick = strdup(botnick);

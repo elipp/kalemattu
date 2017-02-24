@@ -1,5 +1,5 @@
 IDIR =include
-CC=gcc
+CC=clang
 CFLAGS=-I$(IDIR) -Wall -pedantic -g -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE 
 
 ODIR=obj
@@ -7,6 +7,7 @@ ODIR=obj
 SRCDIR=src
 
 LIBS=-lm -lpthread -lircclient
+DEPS=include/types.h
 
 _OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))

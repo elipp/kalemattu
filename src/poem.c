@@ -130,7 +130,10 @@ static wchar_t *generate_random_stanza(long num_verses, kstate_t *state) {
 
 }
 
-wchar_t *generate_poem(kstate_t *state) {
+poem_t generate_poem(kstate_t *state) {
+
+	poem_t poem;
+	memset(&poem, 0, sizeof(poem));
 
 	int num_words_title = 4;
 	int max_syllables = 4;
@@ -144,40 +147,17 @@ wchar_t *generate_poem(kstate_t *state) {
 		title = new_title;
 	}
 
-	printf("title: %ls\n", title);
+	poem.title = title;
 
-	wchar_t poem[8096];
-	poem[0] = L'\0';
+	poem.num_stanzas = gauss_noise_with_limit(2, 1, 1, 4);
+	poem.stanzas = malloc(poem.num_stanzas * sizeof(wchar_t*));
 
-	if (state->LaTeX_output) {
-		wcscat(poem, L"\\poemtitle{");
-		wcscat(poem, title);
-		wcscat(poem, L"}\n");
-		wcscat(poem, L"\\settowidth{\\versewidth}{levaton, Lsitän kylpää ranjoskan asdf}\n");
-		wcscat(poem, L"\\begin{verse}[\\versewidth]\n");
-	} else {
-		wcscat(poem, title);
-		wcscat(poem, L"\n");
-	}
-
-	int num_stanzas = gauss_noise_with_limit(2, 1, 1, 4);
-
-	for (int i = 0; i < num_stanzas; ++i) {
-
+	for (int i = 0; i < poem.num_stanzas; ++i) {
 		int num_verses = gauss_noise_with_limit(4, 1, 1, 4);
-		wchar_t *new_stanza = generate_random_stanza(num_verses, state);
-
-		wcscat(poem, new_stanza);
-		free(new_stanza);
-		wcscat(poem, L"\n");
+		poem.stanzas[i] = generate_random_stanza(num_verses, state);
 	}
 
-	if (state->LaTeX_output) {
-		wcscat(poem, L"\\end{verse}\n");
-		wcscat(poem, L"\\newpage\n");
-	}
-
-	return wcsdup(poem);
+	return poem;
 }
 
 
@@ -253,3 +233,34 @@ static wchar_t *generate_random_poetname() {
 
 }
 
+void poem_print(const poem_t *poem) {
+
+	printf("%ls\n", poem->title);
+
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		printf("%ls\n", poem->stanzas[i]);
+	}
+
+	puts("\n");
+
+}
+
+void poem_print_LaTeX(const poem_t *poem) {
+static const char *pre = "\\poemtitle{%ls}\n\\settowidth{\\versewidth}{levaton, lsitan kylpaa ranjoskan asdf}\n\\begin{verse}[\\versewidth]\n";
+static const char *post = "\\end{verse}\n\\newpage\n\n";
+	printf(pre, poem->title);
+
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		printf("%ls\n", poem->stanzas[i]);
+	}
+
+	puts(post);
+}
+
+void poem_free(poem_t *poem) {
+	free(poem->title);
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		free(poem->stanzas[i]);
+	}
+	free(poem->stanzas);
+}

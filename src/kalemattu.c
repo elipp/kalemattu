@@ -19,6 +19,7 @@
 #include "types.h"
 #include "dict.h"
 #include "poem.h"
+#include "stringutil.h"
 
 static unsigned long hash(unsigned char *str) {
     unsigned long hash = 5381;
@@ -59,7 +60,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				break;
 			case 'i':
 				state->irc_enabled = 1;
-				state->irc_channel = strdup(optarg);
+				state->irc_channels = tokenize(optarg, ",", &state->num_irc_channels);
 				break;
 			case '?':
 				if (optopt == 'n') {
@@ -94,7 +95,8 @@ kstate_t get_default_state() {
 	defaults.LaTeX_output = 0;
 	defaults.rules_apply = 1;
 	defaults.irc_enabled = 0;
-	defaults.irc_channel = NULL;
+	defaults.irc_channels = NULL;
+	defaults.num_irc_channels = 0;
 
 	return defaults;
 }
@@ -111,7 +113,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	kstate_t state = get_default_state();
-	get_commandline_options(argc, argv, &state);
+
+	if (!get_commandline_options(argc, argv, &state)) return 1;
 
 	unsigned int seed = state.numeric_seed != 0 ? state.numeric_seed : time(NULL);
 	srand(seed);
@@ -122,17 +125,16 @@ int main(int argc, char *argv[]) {
 
 	if (state.irc_enabled) {
 
-		const char *channels[] = { "#dumuIItest" };
-		irc_connection_setup("open.ircnet.net", "DUMUII", "gallentau", "Seka S. Tibetiel", channels, 1);
+		irc_connection_setup("open.ircnet.net", "DUMUII", "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
 		running = 1;
 		thread_id = start_irc_thread();
 		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
 	} 
 
 	else {
-		wchar_t *poem = generate_poem(&state);
-		printf("\n%ls\n", poem);
-		free(poem);
+		poem_t poem = generate_poem(&state);
+		poem_print(&poem);
+		poem_free(&poem);
 
 		running = 0;
 	}
