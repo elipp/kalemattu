@@ -142,7 +142,9 @@ poem_t generate_poem(kstate_t *state) {
 
 	for (int i = 1; i < num_words_title; ++i) {
 		// crap
-		wchar_t *new_title = wstring_concat_with_delim(title, construct_random_word(max_syllables, state->rules_apply), L" ");
+		wchar_t *word = construct_random_word(max_syllables, state->rules_apply);
+		wchar_t *new_title = wstring_concat_with_delim(title, word, L" ");
+		free(word);
 		free(title);
 		title = new_title;
 	}

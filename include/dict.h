@@ -13,6 +13,7 @@ sylvec_t sylvec_create();
 int sylvec_contains(sylvec_t *s, const wchar_t *str);
 int sylvec_pushsyl(sylvec_t *s, const syl_t *syl);
 int sylvec_pushstr(sylvec_t *s, const wchar_t *syl); 
+void sylvec_destroy(sylvec_t *s);
 
 const dict_t *get_dictionary();
 

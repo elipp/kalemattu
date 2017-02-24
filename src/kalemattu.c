@@ -139,6 +139,10 @@ int main(int argc, char *argv[]) {
 		running = 0;
 	}
 
+	for (int i = 0; i < 500; ++i) {
+		poem_t poem = generate_poem(&state);
+		poem_free(&poem);
+	}
 	while (running) {
 		usleep(1000000);
 	}

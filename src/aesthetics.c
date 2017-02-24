@@ -302,7 +302,6 @@ int make_valid_word(wchar_t *buffer, long num_syllables) {
 				goto new_syllable;
 			}
 			else if ((n == num_syllables - 1) && (has_forbidden_endconsonant(s) || ends_in_wrong_vowelcombo(s))) {
-				//fprintf(stderr, "elseif forbidden_endc/ends in wrong vowelc %ls\n", concatd);
 				goto new_syllable;
 			}
 			else if (first_c && first_c == prev_first_c) {
@@ -321,6 +320,7 @@ new_syllable:
 			free(concatd);
 
 		}
+
 		if (vharm_state == 0) {
 			// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
 			if (syl_vharm > 0) {
@@ -332,6 +332,8 @@ new_syllable:
 		wcscat(buffer, s);
 
 	}
+
+	sylvec_destroy(&new_syllables);
 
 	return 1;
 

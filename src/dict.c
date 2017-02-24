@@ -65,6 +65,7 @@ int strvec_push(strvec_t* vec, const wchar_t* str) {
 
 static syl_t syl_create(const wchar_t* syl, char length_class) {
 	syl_t s;
+
 	s.chars = wcsdup(syl);
 	s.length = wcslen(syl);
 	s.length_class = length_class;
@@ -111,10 +112,10 @@ int sylvec_pushsyl(sylvec_t *s, const syl_t *syl) {
 
 int sylvec_pushstr(sylvec_t *s, const wchar_t *syl) {
 
-
 	char *vc = get_vc_pattern(syl);
 	const vcp_t *L = find_longest_vc_match(vc, 0);
 	free(vc);
+
 	syl_t new_syl = syl_create(syl, L->length_class);
 
 	sylvec_pushsyl(s, &new_syl);
@@ -149,6 +150,13 @@ wchar_t *sylvec_get_word(sylvec_t *s) {
 	buf[offset] = L'\0';
 
 	return buf;
+}
+
+void sylvec_destroy(sylvec_t *s) {
+	for (int i = 0; i < s->length; ++i) {
+		free(s->syllables[i].chars);
+	}
+	free(s->syllables);
 }
 
 static int word_push_syllable(word_t *w, const wchar_t *s) {
@@ -186,10 +194,15 @@ static void word_syllabify(word_t *word) {
 				word_push_syllable(word, p1);
 				word_push_syllable(word, p2);
 
+				free(p1);
+				free(p2);
+
 
 			} else {
 				word_push_syllable(word, new_syl);
 			}
+
+			free(new_syl);
 		}
 
 		offset = offset + plen;
@@ -258,10 +271,12 @@ static word_t *construct_word_list(const wchar_t* buf, long num_words_in, long *
 		token = wcstok(NULL, L" ", &endptr);
 	}
 
+	free(bufdup);
 	words = realloc(words, i*sizeof(word_t));
 
-	*num_words_out = i;
 
+
+	*num_words_out = i;
 	return words;
 
 }
@@ -301,6 +316,8 @@ int read_file_to_words(const char* filename) {
 	word_t *words = construct_word_list(wbuf, wc, &wc_actual);
 
 	dictionary = dict_create(words, wc_actual);
+
+	free(wbuf);
 
 //	for (int i = 0; i < d.num_words; ++i) {
 //		word_t *w = &d.words[i];
