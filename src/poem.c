@@ -26,30 +26,29 @@ static const word_t *get_single_syllable_word() {
 
 }
 
-static wchar_t *construct_random_word(long max_syllables, bool rules_apply) {
+static int construct_random_word(long max_syllables, bool rules_apply, wchar_t *buffer) {
 
-	wchar_t new_word[256];
-	new_word[0] = L'\0';
+	buffer[0] = L'\0';
 
 	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); 
 
 	if (num_syllables == 1) {
-		return wcsdup(get_single_syllable_word()->chars);
+		wcscat(buffer, get_single_syllable_word()->chars);
+		return 1;
 	} 
 	
 	if (rules_apply) {
-		make_valid_word(new_word, num_syllables);
+		make_valid_word(buffer, num_syllables);
 	}
 	else {
-		make_any_word(new_word, num_syllables);
+		make_any_word(buffer, num_syllables);
 	}
 
-	if (wcslen(new_word) < 2) {
-		return construct_random_word(max_syllables, rules_apply);
+	if (wcslen(buffer) < 2) {
+		return construct_random_word(max_syllables, rules_apply, buffer);
 	} 
-	else {
-		return wcsdup(new_word);
-	}
+
+	return 1;
 
 }
 
@@ -92,10 +91,11 @@ static wchar_t *generate_random_verse(long num_words, bool last_verse, kstate_t 
 	new_verse[0] = L'\0';
 
 	for (int i = 0; i < num_words; ++i) {
+		wchar_t wordbuf[256];
+		wordbuf[0] = L'\0';
 
-		wchar_t *new_word = construct_random_word(4, state->rules_apply);
-		wcscat(new_verse, new_word);
-		free(new_word);
+		construct_random_word(4, state->rules_apply, wordbuf);
+		wcscat(new_verse, wordbuf);
 
 		bool last_word = i == num_words - 1;
 		add_punctuation(new_verse, last_verse, last_word);
@@ -135,23 +135,24 @@ poem_t generate_poem(kstate_t *state) {
 	poem_t poem;
 	memset(&poem, 0, sizeof(poem));
 
-	int num_words_title = 4;
+	int num_words_title = gauss_noise_with_limit(1, 1, 1, 4);
 	int max_syllables = 4;
 
-	wchar_t *title = capitalize_first_nodup(construct_random_word(max_syllables, state->rules_apply));
+	wchar_t wordbuf[256];
+	wordbuf[0] = L'\0';
 
-	for (int i = 1; i < num_words_title; ++i) {
-		// crap
-		wchar_t *word = construct_random_word(max_syllables, state->rules_apply);
-		wchar_t *new_title = wstring_concat_with_delim(title, word, L" ");
-		free(word);
-		free(title);
-		title = new_title;
+	wchar_t *title = malloc(256*sizeof(wchar_t));
+	title[0] = L'\0';
+
+	for (int i = 0; i < num_words_title; ++i) {
+		construct_random_word(max_syllables, state->rules_apply, wordbuf);
+		wcscat(title, wordbuf);
+		wcscat(title, L" ");
 	}
 
-	poem.title = title;
+	poem.title = capitalize_first_nodup(title);
 
-	poem.num_stanzas = gauss_noise_with_limit(2, 1, 1, 4);
+	poem.num_stanzas = gauss_noise_with_limit(2, 0.60, 1, 3);
 	poem.stanzas = malloc(poem.num_stanzas * sizeof(wchar_t*));
 
 	for (int i = 0; i < poem.num_stanzas; ++i) {
@@ -212,24 +213,26 @@ void print_as_latex_document(const wchar_t* poem, const wchar_t *poetname) {
 
 static wchar_t *generate_random_poetname() {
 
-	wchar_t name[128];
+	wchar_t name[256];
 	name[0] = L'\0';
 
-	wchar_t *first_name = capitalize_first_nodup(construct_random_word(3, true));
-	wchar_t *second_name = capitalize_first_nodup(construct_random_word(2, true));
-	second_name[1] = L'\0';
+	wchar_t wordbuf[256];
+	wordbuf[0] = L'\0';
 
-	wchar_t *surname = capitalize_first_nodup(construct_random_word(5, true));
-
-	wcscat(name, first_name);
+	// first name
+	construct_random_word(3, true, wordbuf);
+	wcscat(name, capitalize_first_nodup(wordbuf));
 	wcscat(name, L" ");
-	wcscat(name, second_name);
-	wcscat(name, L". ");
-	wcscat(name, surname);
 
-	free(first_name);
-	free(second_name);
-	free(surname);
+	// second name
+	construct_random_word(2, true, wordbuf);
+	wordbuf[1] = L'.';
+	wordbuf[2] = L'\0';
+	wcscat(name, capitalize_first_nodup(wordbuf));
+	wcscat(name, L" ");
+
+	construct_random_word(5, true, wordbuf);
+	wcscat(name, capitalize_first_nodup(wordbuf));
 
 	return wcsdup(name);
 

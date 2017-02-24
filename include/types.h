@@ -56,4 +56,9 @@ typedef struct poem_t {
 
 } poem_t;
 
+typedef struct aesthetics_t {
+	int vowel_harmony;
+
+} aesthetics_t;
+
 #endif

@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 
 	if (state.irc_enabled) {
 
-		irc_connection_setup("open.ircnet.net", "DUMUII", "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
+		irc_connection_setup("open.ircnet.net", "dumuii", "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
 		running = 1;
 		thread_id = start_irc_thread();
 		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
@@ -139,10 +139,6 @@ int main(int argc, char *argv[]) {
 		running = 0;
 	}
 
-	for (int i = 0; i < 500; ++i) {
-		poem_t poem = generate_poem(&state);
-		poem_free(&poem);
-	}
 	while (running) {
 		usleep(1000000);
 	}
