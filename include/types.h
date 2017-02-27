@@ -23,6 +23,7 @@ typedef struct kstate_t {
 
 typedef struct syl_t {
 	wchar_t *chars;
+	char *vcp;
 	long length;
 	char length_class;
 } syl_t;
@@ -56,9 +57,25 @@ typedef struct poem_t {
 
 } poem_t;
 
+typedef struct ae_filter_state_t {
+       int vharm_state;
+       wchar_t prev_first_c;
+       sylvec_t new_syllables;
+       const syl_t *syl;
+       wchar_t *buffer;
+       long n;
+       long num_syllables;
+} ae_filter_state_t;
+
+typedef int (*ae_filterfunc)(ae_filter_state_t*);
+
 typedef struct aesthetics_t {
 	int vowel_harmony;
-
 } aesthetics_t;
+
+typedef struct vcb_t {
+	unsigned char pattern;
+	unsigned char length;
+} vcb_t;
 
 #endif

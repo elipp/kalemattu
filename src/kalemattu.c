@@ -112,6 +112,18 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	wchar_t *teststr = L"taianomaianen";
+	uint64_t test = get_vc_binary(teststr);
+	unsigned char offset = 0;
+
+	while (offset < wcslen(teststr)) {
+		vcb_t longest = find_longest_vcp_binary(teststr, test, wcslen(teststr), offset);
+//		syl_t s = get_next_syllable(teststr, test, wcslen(teststr), offset);
+		offset += longest.length;
+	}
+
+	//fprintf(stderr, "test = %lu, longest.pattern = %u, longest.length = %u\n", test, longest.pattern, longest.length);
+
 	kstate_t state = get_default_state();
 
 	if (!get_commandline_options(argc, argv, &state)) return 1;

@@ -2,6 +2,7 @@
 #define AESTHETICS_H
 
 #include <wchar.h>
+#include <stdint.h>
 
 #include "types.h"
 
@@ -18,21 +19,23 @@
 // (sprint.teri).[84]
 
 
-char vc_map(wchar_t c);
-const vcp_t *find_longest_vc_match(const char* vc, long offset);
-
 char *get_vc_pattern(const wchar_t* input);
 char *get_vc_pattern_grep(const wchar_t* input);
 
 const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
-wchar_t get_first_consonant(const wchar_t *str);
+//wchar_t get_first_consonant(const wchar_t *str);
 
 int make_valid_word(wchar_t *buffer, long num_syllables);
 int make_any_word(wchar_t *buffer, long num_syllables);
 
-bool has_diphthong(const wchar_t* syllable); 
+bool has_diphthong(const wchar_t* syllable);
 bool has_double_vowel(const wchar_t* syllable);
 
+//vcb_t find_longest_vcp_binary(uint64_t vcp, long length, long offset);
+vcb_t find_longest_vcp_binary(const wchar_t *word, uint64_t vcp, long length, long offset);
+uint64_t get_vc_binary(const wchar_t *input);
+
+syl_t get_next_syllable(const wchar_t *word, uint64_t vcp, long length, long offset);
 
 #endif
