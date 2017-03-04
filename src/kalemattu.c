@@ -112,17 +112,18 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	wchar_t *teststr = L"taianomaianen";
+	wchar_t *teststr = L"pianokulli";
 	uint64_t test = get_vc_binary(teststr);
-	unsigned char offset = 0;
+	long offset = 0;
 
 	while (offset < wcslen(teststr)) {
-		vcb_t longest = find_longest_vcp_binary(teststr, test, wcslen(teststr), offset);
-//		syl_t s = get_next_syllable(teststr, test, wcslen(teststr), offset);
-		offset += longest.length;
+		int a = experimental_longest(teststr, test, wcslen(teststr), offset);
+		fprintf(stderr, "offset %ld, a = %d\n", offset, a);
+		if (a <= offset) break;
+		offset = a;
 	}
 
-	//fprintf(stderr, "test = %lu, longest.pattern = %u, longest.length = %u\n", test, longest.pattern, longest.length);
+
 
 	kstate_t state = get_default_state();
 
@@ -131,6 +132,7 @@ int main(int argc, char *argv[]) {
 	unsigned int seed = state.numeric_seed != 0 ? state.numeric_seed : time(NULL);
 	srand(seed);
 
+	fputs("starting kalemattu (revision " COMMIT_ID ")\n", stderr);
 	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
 
 	pthread_t thread_id;

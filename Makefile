@@ -1,6 +1,6 @@
 IDIR =include
 CC=clang
-CFLAGS=-I$(IDIR) -Wall -pedantic -g -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE 
+CFLAGS=-I$(IDIR) -Wall -pedantic -g -DCOMMIT_ID=\"$(shell git rev-parse HEAD | head -c 6)\" -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE 
 
 ODIR=obj
 

@@ -38,4 +38,7 @@ uint64_t get_vc_binary(const wchar_t *input);
 
 syl_t get_next_syllable(const wchar_t *word, uint64_t vcp, long length, long offset);
 
+int experimental_longest(const wchar_t *word, uint64_t vcp, long length, long offset);
+int experimental_synth_get_syllable(long length, wchar_t *buffer);
+
 #endif

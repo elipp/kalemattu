@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "types.h"
 #include "aesthetics.h"
+#include "types.h"
 #include "dict.h"
 #include "stringutil.h"
+#include "distributions.h"
 
 static const vcp_t VC_PATTERNS[] = {
     {"V", '1'},
@@ -116,12 +117,16 @@ uint64_t get_vc_binary(const wchar_t *input) {
 #define RESET   "\033[0m"
 #define ATTENTION "\033[1m\033[31m"      
 
+static void printbits(unsigned char v, int num) {
+  for(int i = 0; i < num; i++) fputc('0' + ((v >> i) & 1), stderr);
+  fputc('\n', stderr);
+}
+
 static int has_two_consecutive_vowels(unsigned char p) {
 	static const unsigned char twobits = 0x3;
 
 	for (int i = 0; i < 7; ++i) {
 		if (((p & (twobits << i)) >> i) == twobits) {
-			fprintf(stderr, "pattern %u has two consecutive vowels.\n", p);
 			return 1;
 		}
 	}
@@ -140,45 +145,226 @@ vcb_t find_longest_vcp_binary(const wchar_t *word, uint64_t vcp, long length, lo
 	memset(&r, 0, sizeof(r));
 
 	for (int i = begin; i >= 0; --i) {
-		uint64_t var = var_base & (0x3F >> (5 - i));
-		wchar_t *sub = get_subwstring(word, offset, i + 1);
-		fprintf(stderr, "%ls\n", sub);
+		long pattern_length = i+1;
+		uint64_t var = var_base & (0x3F >> (5 - i)); // 0x3f == 0011 1111 in binary
 
 		for (int j = 0; j < 5; ++j) {
 			unsigned char pat = vc_patterns_binary[i][j];
+			if (!pat) break;  // this is some stupid shit right here... :D:D
+			if (var == pat) {  // pattern match
+				// get last bit			
+//				printbits(pat, pattern_length);
+				bool nextvowel = var_base & (1 << pattern_length);
+				bool lastc = (pat & (1 << i)) == 0;
 
-			if ((var ^ pat) == 0) { 
-				if (var_base & (1 << (i + 1))) {
-					// ^^^ is basically a nextvowel check
-					if (has_diphthong(sub) || has_double_vowel(sub)) {
-						fprintf(stderr, "%ls has a passing double vowel! (pattern: %u)\n", sub, pat);
+				if (has_two_consecutive_vowels(pat)) {
+					wchar_t *sub = get_subwstring(word, offset, pattern_length);
+					bool good = has_diphthong(sub) || has_double_vowel(sub);
+					free(sub);
+
+					if (good) {
 						r.pattern = pat;
-						r.length = i + 1;
-						return r;
-					} 
-					else {
-						fprintf(stderr, "%ls had a vowel as next letter!\n",sub);
-						r.pattern = pat & (0x3F >> (6 - i));
-						r.length = i + 1;
+						r.length = (lastc && !nextvowel) ? pattern_length : pattern_length - 1;
+						fprintf(stderr, "exit #1, nextvowel = %d, lastc = %d\n", nextvowel, lastc);
+						printbits(pat, pattern_length);
 						return r;
 					}
 
-					
-				} else {
-					fprintf(stderr, "%ls pattern match, no next vowel\n", sub);
+				}
+
+				if (lastc && !nextvowel) {
+					// if the last char is a consonant, see if the next one is a vowel;
+					// and if it is, then ignore this pattern
 					r.pattern = pat;
-					r.length = i + 1;
+					r.length = pattern_length;
+					fprintf(stderr, "exit #2, nextvowel = %d, lastc = %d\n", nextvowel, lastc);
+					printbits(pat, pattern_length);
 					return r;
 				}
-			}
+				
+				r.pattern = pat;
+				r.length = (lastc && !nextvowel) ? pattern_length : pattern_length - 1;
+				
+				fprintf(stderr, "exit #3, nextvowel = %d, lastc = %d\n", nextvowel, lastc);
+				printbits(pat, pattern_length);
+
+				return r;
+			
 		}
 	}
+}
 
-	//fprintf(stderr, "var_base: %lu\n", var_base);
-	return r;
+fprintf(stderr, "(warning: get_longest_binary returned 0)\n");
+return r;
 
 }
 
+// a  11,90
+// i  10,64
+// t  9,77
+// n  8,67
+// e  8,21
+// s  7,85
+// l  5,68
+// k  5,34
+// o  5,24
+// u  5,06
+// ä  4,59
+// m  3,30
+// v  2,52
+// r  2,32
+// j  1,91
+// h  1,83
+// y  1,79
+// p  1,74
+// d  0,85
+// ö  0,49
+// g  0,13
+// b  0,06
+// f  0,06
+// c  0,04
+// w  0,01
+// å  0,00
+// q  0,00
+
+typedef struct char_frequency_t {
+	wchar_t c;
+	double freq;
+} char_frequency_t;
+
+static const char_frequency_t CHAR_FREQUENCIES[] = {
+	{ L'a', 0.11940196341735},
+	{ L'i', 0.106705906559502},
+	{ L't', 0.09795303211924},
+	{ L'n', 0.086937246907322},
+	{ L'e', 0.082320425749348},
+	{ L's', 0.078789157516709},
+	{ L'l', 0.056996763071229},
+	{ L'k', 0.053548844043169},
+	{ L'o', 0.05256435706155},
+	{ L'u', 0.05080033355788},
+	{ L'ä', 0.046004734395881},
+	{ L'm', 0.033127080961874},
+	{ L'v', 0.025278565523951},
+	{ L'r', 0.023282211145681},
+	{ L'j', 0.019162666643044},
+	{ L'h', 0.018321926840336},
+	{ L'y', 0.017985711449886},
+	{ L'p', 0.017427634167054},
+	{ L'd', 0.008483902127901},
+	{ L'ö', 0.004907536741094},
+	{ L'\0', 0 }
+};
+
+static const char_frequency_t CHAR_FREQUENCIES_CUMULATIVE[] = {
+	{L'a', 0.11940196341735},
+	{L'i', 0.226107869976851},
+	{L't', 0.324060902096092},
+	{L'n', 0.410998149003413},
+	{L'e', 0.493318574752761},
+	{L's', 0.57210773226947},
+	{L'l', 0.629104495340699},
+	{L'k', 0.682653339383868},
+	{L'o', 0.735217696445418},
+	{L'u', 0.786018030003298},
+	{L'ä', 0.832022764399179},
+	{L'm', 0.865149845361053},
+	{L'v', 0.890428410885004},
+	{L'r', 0.913710622030685},
+	{L'j', 0.932873288673729},
+	{L'h', 0.951195215514065},
+	{L'y', 0.969180926963951},
+	{L'p', 0.986608561131004},
+	{L'd', 0.995092463258906},
+	{L'ö', 1},
+	{L'\0', 0 },
+};
+
+
+static wchar_t synth_get_random_char() {
+	double r = get_randomf();
+
+	const char_frequency_t *i = &CHAR_FREQUENCIES_CUMULATIVE[0];
+	while (i->c && r < i->freq) ++i;
+	
+	return i->c;
+}
+
+static wchar_t synth_get_random_consonant() {
+	wchar_t c = synth_get_random_char();
+	while (vc_map_binary(c)) c = synth_get_random_char();
+
+	return c;
+}
+
+static wchar_t synth_get_random_vowel() {
+	wchar_t c = synth_get_random_char();
+	while (!vc_map_binary(c)) c = synth_get_random_char();
+
+	return c;
+}
+
+
+
+int experimental_synth_get_syllable(long length, wchar_t *buffer) {
+
+	buffer[0] = synth_get_random_consonant();
+	for (int i = 1; i < length; ++i) {
+		buffer[i] = synth_get_random_char();
+	}
+
+	buffer[length] = L'\0';
+}
+
+
+int experimental_longest(const wchar_t *word, uint64_t vcp, long length, long offset) {
+
+	static const unsigned char cv = 0x2;
+	static const unsigned char vv = 0x3;
+
+	int ignore_first = !(vcp & 0x1) && offset == 0;
+	fprintf(stderr, "offset = %ld, ignore_first: %d\n", offset, ignore_first);
+
+	for (long i = offset; i < length; ++i) {
+		uint64_t b = (vcp >> i) & 0x3;
+
+		if (b == cv) {
+			//fprintf(stderr, "have a CV at offset %ld (%ls)\n", i, sub);
+			if (ignore_first) { 
+				ignore_first = 0; 
+				fprintf(stderr, "ig0, i = %ld\n", i);
+			}
+			else { 
+				fprintf(stderr, "(exit 1, CV) %ld\n", i);
+			}
+		}
+
+		else if (b == vv) {
+			if (ignore_first) { 
+				ignore_first = 0; 
+				fprintf(stderr, "ig0, i = %ld\n", i);
+				++i;
+			}
+
+			else {
+				wchar_t *sub = get_subwstring(word, i, 2);
+				bool good = (has_diphthong(sub) || has_double_vowel(sub));
+				free(sub);
+
+				if (good) {
+					fprintf(stderr, "(exit 2, DIPHTHONG/DOUBLE) %ld\n", i);
+
+				} else {
+					fprintf(stderr, "(exit 3 VOKAALIYHTYMA) %ld\n", i);
+				}
+			}
+		}
+
+
+	}
+
+	return -1;
+}
 
 syl_t get_next_syllable(const wchar_t *word, uint64_t vcp, long length, long offset) {
 
@@ -186,29 +372,9 @@ syl_t get_next_syllable(const wchar_t *word, uint64_t vcp, long length, long off
 	memset(&s, 0, sizeof(s));
 	vcb_t longest = find_longest_vcp_binary(word, vcp, length, offset);
 
-	if (has_two_consecutive_vowels(longest.pattern)) {
-		wchar_t *sub = get_subwstring(word, offset, longest.length);
-
-		fprintf(stderr, "need to check if syllable \"%ls\" has diphthong or double vowelz\n", sub);
-		free(sub);
-		return s;
-	}
-
-
-//	if (offset > 0 && str_contains(pat, "VV") && (!has_diphthong(new_syl)) && (!has_double_vowel(new_syl))) {
-//		size_t vv_offset = strstr(pat, "VV") - pat;
-//		//				printf("pattern: %s, vv_offset = %lu\n", pat, vv_offset);
-//
-//		wchar_t *p1 = get_subwstring(word->chars, offset, vv_offset + 1);
-//		wchar_t *p2 = get_subwstring(word->chars, offset+vv_offset+1, plen - wcslen(p1));
-//
-//		word_push_syllable(word, p1);
-//		word_push_syllable(word, p2);
-//
-//		free(p1);
-//		free(p2);
-//	}
-
+	s.chars = get_subwstring(word, offset, longest.length);
+	s.length = longest.length;
+	//	s.length_class = has_two_consecutive_vowels(longest.pattern) ? 2 : 1;
 
 	return s;
 
@@ -223,7 +389,7 @@ char *get_vc_pattern(const wchar_t* input) {
 
 	vc[len] = '\0';
 
-//	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
+	//	printf("get_vc_pattern: input: %ls, returning %s\n", input, vc);
 	return vc;
 }
 
@@ -250,7 +416,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 	const vcp_t *current = &VC_PATTERNS[0];
 
 	while (current->pattern != NULL) {
-	
+
 		bool full_match = false;
 		size_t plen = strlen(current->pattern);
 
@@ -263,14 +429,14 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 				if ((vclen - offset) > plen) {
 					if (current->pattern[plen-1] == 'C') {
 						if (vc[plen+offset] == 'V') {
-//							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
+							//							printf("warning: nextvowel check for %s failed at offset %lu!\n", current->pattern, offset);
 							full_match = false;
 						}
 					}
 				}
 
 				if (full_match && strlen(longest->pattern) < plen) {
-//					printf("new longest matching pattern = %s (input %s, offset %ld)\n", current->pattern, vc, offset);
+					//					printf("new longest matching pattern = %s (input %s, offset %ld)\n", current->pattern, vc, offset);
 					longest = current;
 				}
 			}
@@ -279,7 +445,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 		++current;
 	}
 
-//	printf("vc: %s, longest pattern: %s, offset = %lu\n", vc, longest->pattern, offset);
+	//	printf("vc: %s, longest pattern: %s, offset = %lu\n", vc, longest->pattern, offset);
 
 	return longest;
 
@@ -290,21 +456,21 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 bool has_diphthong(const wchar_t* syllable) {
 
 	static const wchar_t* DIPHTHONGS[] = {
-L"yi", L"öi", L"äi", L"ui", L"oi",
-L"ai", L"äy", L"au", L"yö", L"öy",
-L"uo", L"ou", L"ie", L"ei", L"eu",
-L"iu", L"ey", L"iy", NULL
-};
+		L"yi", L"öi", L"äi", L"ui", L"oi",
+		L"ai", L"äy", L"au", L"yö", L"öy",
+		L"uo", L"ou", L"ie", L"ei", L"eu",
+		L"iu", L"ey", L"iy", NULL
+	};
 
 	static const wchar_t* NON_DIPHTHONGS[] = { // not really used 
- L"ae", L"ao", L"ea", L"eo", L"ia",
- L"io", L"iä", L"oa", L"oe", L"ua",
- L"ue", L"ye", L"yä", L"äe", L"äö",
- L"öä", L"eä", L"iö", L"eö", L"öe",
- L"äa", L"aä", L"oö", L"öo", L"yu",
- L"uy", L"ya", L"yu", L"äu", L"uä",
- L"uö", L"öu", L"öa", L"aö", NULL
-};
+		L"ae", L"ao", L"ea", L"eo", L"ia",
+		L"io", L"iä", L"oa", L"oe", L"ua",
+		L"ue", L"ye", L"yä", L"äe", L"äö",
+		L"öä", L"eä", L"iö", L"eö", L"öe",
+		L"äa", L"aä", L"oö", L"öo", L"yu",
+		L"uy", L"ya", L"yu", L"äu", L"uä",
+		L"uö", L"öu", L"öa", L"aö", NULL
+	};
 
 	const wchar_t **d = &DIPHTHONGS[0];
 	while (*d) {
@@ -317,8 +483,8 @@ L"iu", L"ey", L"iy", NULL
 bool has_double_vowel(const wchar_t* syllable) {
 
 	static const wchar_t* DOUBLEVOWELS[] = {
- L"aa", L"ee", L"ii", L"oo", L"uu", L"yy", L"ää", L"öö", NULL
-};
+		L"aa", L"ee", L"ii", L"oo", L"uu", L"yy", L"ää", L"öö", NULL
+	};
 
 	const wchar_t **s = &DOUBLEVOWELS[0];
 	while (*s) {
@@ -330,26 +496,26 @@ bool has_double_vowel(const wchar_t* syllable) {
 }
 
 static const wchar_t *ALLOWED_CCOMBOS[] = {
-L"kk", L"ll", L"mm", L"nn", L"pp", L"rr", L"ss", L"tt",
-L"sd", L"lk", L"lt", L"rt", L"tr", L"st", L"tk", L"mp", NULL
+	L"kk", L"ll", L"mm", L"nn", L"pp", L"rr", L"ss", L"tt",
+	L"sd", L"lk", L"lt", L"rt", L"tr", L"st", L"tk", L"mp", NULL
 };
 
 static const wchar_t *FORBIDDEN_CCOMBOS[] = {
-L"nm", L"mn", L"sv", L"vs", L"kt", 
-L"tk", L"sr", L"sn", L"tv", L"sm", 
-L"ms", L"tm", L"tl", L"nl", L"tp", 
-L"pt", L"tn", L"np", L"sl", L"th", 
-L"td", L"dt", L"tf", L"ln", L"mt", 
-L"kn", L"kh", L"lr", L"kp", L"nr",
-L"ml", L"mk", L"km", L"nv", L"sh",
-L"ls", L"hn", L"tj", L"sj", L"pk", 
-L"rl", L"kr", L"mj", L"kl", L"kj",
-L"nj", L"kv", L"hs", L"hl", L"nh",
-L"pm", L"mr", L"tg", L"mh", L"hp",
-L"kd", L"dk", L"dl", L"ld", L"mv", 
-L"vm", L"pr", L"hh", L"pn", L"tr",
-L"ts", L"ks", L"md", L"pj", L"jp",
-L"kg", L"pv", L"ph", NULL
+	L"nm", L"mn", L"sv", L"vs", L"kt", 
+	L"tk", L"sr", L"sn", L"tv", L"sm", 
+	L"ms", L"tm", L"tl", L"nl", L"tp", 
+	L"pt", L"tn", L"np", L"sl", L"th", 
+	L"td", L"dt", L"tf", L"ln", L"mt", 
+	L"kn", L"kh", L"lr", L"kp", L"nr",
+	L"ml", L"mk", L"km", L"nv", L"sh",
+	L"ls", L"hn", L"tj", L"sj", L"pk", 
+	L"rl", L"kr", L"mj", L"kl", L"kj",
+	L"nj", L"kv", L"hs", L"hl", L"nh",
+	L"pm", L"mr", L"tg", L"mh", L"hp",
+	L"kd", L"dk", L"dl", L"ld", L"mv", 
+	L"vm", L"pr", L"hh", L"pn", L"tr",
+	L"ts", L"ks", L"md", L"pj", L"jp",
+	L"kg", L"pv", L"ph", NULL
 };
 
 static bool has_forbidden_ccombos(const wchar_t* input) {
@@ -381,7 +547,7 @@ static const wchar_t *FORBIDDEN_ENDCONSONANTS = L"pkrmhvsl";
 
 bool has_forbidden_endconsonant(const wchar_t *input) {
 	wchar_t l = input[wcslen(input)-1];
-	
+
 	const wchar_t *c = &FORBIDDEN_ENDCONSONANTS[0];
 	while (*c) {
 		if (l == *c) { return true; }
@@ -422,11 +588,12 @@ static wchar_t get_first_consonant(const wchar_t *str) {
 	int i = 0;
 	while (vc_map(str[i]) != 'C' && i < len) ++i;
 	if (i == len) return L'\0';
+
 	else return str[i];
 }
 
 static const wchar_t *FORBIDDEN_VOWELENDINGS[] = {
-L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"äi", L"eu", L"öy",  NULL
+	L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"äi", L"eu", L"öy",  NULL
 };
 
 static bool ends_in_wrong_vowelcombo(const wchar_t *str) {
@@ -492,7 +659,7 @@ static int filter_too_many_consecutive_vowels(ae_filter_state_t *fs) {
 
 static int filter_forbidden_ending(ae_filter_state_t *fs) {
 	if ((fs->n == fs->num_syllables - 1) && 
-	(has_forbidden_endconsonant(fs->syl->chars) || ends_in_wrong_vowelcombo(fs->syl->chars))) {
+			(has_forbidden_endconsonant(fs->syl->chars) || ends_in_wrong_vowelcombo(fs->syl->chars))) {
 		return 0;
 	}
 
