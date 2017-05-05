@@ -32,13 +32,30 @@ static unsigned long hash(unsigned char *str) {
     return hash;
 }
 
+static int validate_irc_options(kstate_t *state) {
+
+	int err = 0;
+
+	if (state->irc_enabled && !state->irc_nick) {
+		fprintf(stderr, "(warning: IRC option (-i) supplied but no nick with -N specified; defaulting to kalemattu)\n");
+		state->irc_nick = strdup("kalemattu");
+	}
+	
+	if (state->irc_nick && !state->irc_enabled) {
+		fprintf(stderr, "error: IRC nick option (-N) supplied but IRC daemon mode (-i) not enabled!\n");
+		err = 1;
+	}
+
+	return !err;
+
+}
 
 static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 	char *endptr;
 
 	opterr = 0;
 	int c;
-	while ((c = getopt (argc, argv, "cls:n:i:")) != -1) {
+	while ((c = getopt (argc, argv, "cls:n:i:N:")) != -1) {
 		switch (c)
 		{
 			case 'c':
@@ -51,7 +68,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				size_t len = strlen(optarg);
 				state->numeric_seed = strtol(optarg, &endptr, 10);
 				if (endptr < optarg+len) {
-					fprintf(stderr, "(option -n: strtol: warning: the argument string \"%s\" couldn't be fully converted!)\n", optarg); 
+					fprintf(stderr, "(option -n: strtol: warning: the argument string \"%s\" couldn't be fully converted to long!)\n", optarg); 
 				}
 				break;
 			}
@@ -62,12 +79,18 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				state->irc_enabled = 1;
 				state->irc_channels = tokenize(optarg, ",", &state->num_irc_channels);
 				break;
+			case 'N':
+				state->irc_nick = strdup(optarg);
+				break;
 			case '?':
 				if (optopt == 'n') {
 					fprintf(stderr, "error: the numeric seed option (-n) requires a (base-10) numeric argument.\n");
 				}
+				else if (optopt == 'N') {
+					fprintf(stderr, "error: the IRC nick option (-N) requires a string as argument.\n");
+				}
 				else if (optopt == 'i') {
-					fprintf(stderr, "error: the irc option (-i) requires a channel as argument.\n");
+					fprintf(stderr, "error: the IRC option (-i) requires a channel as argument.\n");
 				}
 				else if (optopt == 's') {
 					fprintf(stderr, "error: the seed option (-s) requires a string as argument.\n");
@@ -84,7 +107,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 		}
 	}
 
-	return 1;
+	return validate_irc_options(state);
 
 }
 
@@ -96,6 +119,7 @@ kstate_t get_default_state() {
 	defaults.rules_apply = 1;
 	defaults.irc_enabled = 0;
 	defaults.irc_channels = NULL;
+	defaults.irc_nick = NULL;
 	defaults.num_irc_channels = 0;
 
 	return defaults;
@@ -125,10 +149,9 @@ int main(int argc, char *argv[]) {
 
 	if (state.irc_enabled) {
 
-		irc_connection_setup("open.ircnet.net", "dumuii", "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
+		irc_connection_setup("open.ircnet.net", state.irc_nick, "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
 		running = 1;
 		thread_id = start_irc_thread();
-		fprintf(stderr, "irc thread id: 0x%lX\n", thread_id);
 	} 
 
 	else {

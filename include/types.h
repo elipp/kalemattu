@@ -18,6 +18,7 @@ typedef struct kstate_t {
 	int rules_apply;
 	int irc_enabled;
 	char* const* irc_channels;
+	const char* irc_nick;
 	long num_irc_channels;
 } kstate_t;
 
