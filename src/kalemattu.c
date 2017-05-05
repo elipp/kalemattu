@@ -125,7 +125,7 @@ kstate_t get_default_state() {
 	return defaults;
 }
 
-static int running = 1;
+int running = 1;
 
 int main(int argc, char *argv[]) {
 

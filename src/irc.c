@@ -14,6 +14,8 @@ static irc_settings_t irc_settings;
 
 static int irc_settings_exist = 0;
 
+extern int running;
+
 static void event_connect_callback(irc_session_t *session, const char *event, const char *origin, const char **params, unsigned int count) {
 
 	fprintf(stderr, "event: %s, origin: %s\n", event, origin);
@@ -137,6 +139,7 @@ static void *run_irc(void *arg) {
 
 	if (irc_run(irc_session)) {
 		fprintf(stderr, "irc_run failed!\n");
+		running = 0;
 		return NULL;
 	}
 
