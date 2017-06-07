@@ -1,6 +1,12 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <ctype.h>
+#include <stdbool.h>
+#include <locale.h>
+#include <wctype.h>
+#include <wchar.h>
+
 typedef struct strvec_t {
 	wchar_t **strs;
 	int length;
@@ -16,10 +22,14 @@ typedef struct kstate_t {
 	unsigned int numeric_seed;
 	int LaTeX_output;
 	int rules_apply;
+
 	int irc_enabled;
 	char* const* irc_channels;
 	const char* irc_nick;
 	long num_irc_channels;
+
+	int fcgi_enabled;
+	const char* fcgi_addr;
 } kstate_t;
 
 typedef struct syl_t {

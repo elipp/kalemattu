@@ -6,10 +6,10 @@ ODIR=obj
 
 SRCDIR=src
 
-LIBS=-lm -lpthread -lircclient
+LIBS=-lm -lpthread -lircclient -lfcgi
 DEPS=include/types.h
 
-_OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o
+_OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o fcgi.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)

@@ -148,21 +148,20 @@ static void *run_irc(void *arg) {
 	return arg;
 }
 
-pthread_t start_irc_thread() {
+int start_irc_thread(pthread_t *t) {
 
 	if (!irc_settings_exist) { 
 		fprintf(stderr, "start_irc_thread(): irc settings haven't been set up!\n");
 		return 0; 
 	}
 
-	pthread_t thread_id;
-	int e = pthread_create(&thread_id, NULL, &run_irc, NULL);
+	int e = pthread_create(t, NULL, &run_irc, NULL);
 	if (e != 0) {
 		fprintf(stderr, "creating thread for run_irc failed (pthread_create)\n");
 		return 0;
 	}
 
-	return thread_id;
+	return 1;
 
 }
 

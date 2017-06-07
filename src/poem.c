@@ -240,13 +240,31 @@ static wchar_t *generate_random_poetname() {
 
 void poem_print(const poem_t *poem) {
 
+
 	printf("%ls\n", poem->title);
 
 	for (int i = 0; i < poem->num_stanzas; ++i) {
 		printf("%ls\n", poem->stanzas[i]);
 	}
 
-	puts("\n");
+	printf("\n");
+
+}
+
+char* poem_print_to_buffer(const poem_t *poem, int *len) {
+#define BUFFER_SIZE 8096
+	char *buffer = malloc(BUFFER_SIZE); // shouldn't go over that :D
+
+	int offset = sprintf(buffer, "%ls\n", poem->title);
+
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		offset += sprintf(buffer + offset, "%ls\n", poem->stanzas[i]);
+	}
+
+	offset += sprintf(buffer + offset, "\n");
+	*len = offset;
+
+	return buffer;
 
 }
 

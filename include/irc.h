@@ -15,6 +15,6 @@ typedef struct irc_settings_t {
 } irc_settings_t;
 
 int irc_connection_setup(const char* servaddr, const char* botnick, const char* username, const char* realname, char* const* channels, int num_channels);
-pthread_t start_irc_thread();
+int start_irc_thread(pthread_t *t);
 
 #endif

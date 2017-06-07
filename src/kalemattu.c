@@ -3,15 +3,9 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <stdbool.h>
-#include <locale.h>
-#include <wctype.h>
-#include <wchar.h>
-#include <unistd.h>
 #include <pthread.h>
-
-#include <libircclient/libircclient.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "aesthetics.h"
 #include "distributions.h"
@@ -20,6 +14,10 @@
 #include "dict.h"
 #include "poem.h"
 #include "stringutil.h"
+#include "fcgi.h"
+
+#include <libircclient/libircclient.h>
+
 
 static unsigned long hash(unsigned char *str) {
     unsigned long hash = 5381;
@@ -55,7 +53,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 
 	opterr = 0;
 	int c;
-	while ((c = getopt (argc, argv, "cls:n:i:N:")) != -1) {
+	while ((c = getopt (argc, argv, "cls:n:i:N:f:")) != -1) {
 		switch (c)
 		{
 			case 'c':
@@ -82,6 +80,10 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 			case 'N':
 				state->irc_nick = strdup(optarg);
 				break;
+			case 'f':
+				state->fcgi_enabled = 1;
+				state->fcgi_addr = strdup(optarg);
+				break;
 			case '?':
 				if (optopt == 'n') {
 					fprintf(stderr, "error: the numeric seed option (-n) requires a (base-10) numeric argument.\n");
@@ -94,6 +96,9 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				}
 				else if (optopt == 's') {
 					fprintf(stderr, "error: the seed option (-s) requires a string as argument.\n");
+				}
+				else if (optopt == 'f') {
+					fprintf(stderr, "error: the fastcgi-mode option (-f) requires a bind address as argument (e.g. :2005)\n");
 				}
 				else if (isprint (optopt)) {
 					fprintf(stderr, "error: unknown option `-%c'.\n", optopt);
@@ -121,17 +126,19 @@ kstate_t get_default_state() {
 	defaults.irc_channels = NULL;
 	defaults.irc_nick = NULL;
 	defaults.num_irc_channels = 0;
+	defaults.fcgi_enabled = 0;
 
 	return defaults;
 }
 
-int running = 1;
+int running = 0;
 
 int main(int argc, char *argv[]) {
 
+	
 	setlocale(LC_ALL, ""); // for whatever reason, this is needed. using fi_FI.UTF-8 doesn't work
 
-	if (!read_file_to_words("kalevala.txt")) {
+	if (!read_file_to_words("/home/elias/kalemattu/kalevala.txt")) {
 		fprintf(stderr, "kalemattu: fatal: couldn't open input file kalevala.txt, aborting!\n");
 		return 1;
 	}
@@ -143,27 +150,31 @@ int main(int argc, char *argv[]) {
 	unsigned int seed = state.numeric_seed != 0 ? state.numeric_seed : time(NULL);
 	srand(seed);
 
-	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
+//	fprintf(stderr, "(info: using %u as random seed)\n\n", seed);
 
-	pthread_t thread_id;
+	running = 1;
+	pthread_t irc_thread;
+	pthread_t fcgi_thread;
 
 	if (state.irc_enabled) {
 
 		irc_connection_setup("open.ircnet.net", state.irc_nick, "gallentau", "Seka S. Tibetiel", state.irc_channels, state.num_irc_channels);
-		running = 1;
-		thread_id = start_irc_thread();
+	       	if (!start_irc_thread(&irc_thread)) return 1;
 	} 
 
-	else {
+	if (state.fcgi_enabled) {
+		if (!start_fcgi_thread(&state, &fcgi_thread)) return 1;
+	}
+
+	if (!state.irc_enabled && !state.fcgi_enabled) { 
 		poem_t poem = generate_poem(&state);
 		poem_print(&poem);
 		poem_free(&poem);
-
-		running = 0;
+		return 0;
 	}
 
 	while (running) {
-		usleep(1000000);
+		usleep(10000000);
 	}
 
 	return 0;
