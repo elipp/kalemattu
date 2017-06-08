@@ -96,12 +96,12 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 			FCGX_FPrintF(r->out, "\n");
 			return REQUEST_FAVICON;
 		 }
-		 else if (strcmp(value, "/poem") == 0) {
+		 else if (strcmp(value, "/p") == 0) {
 			return_poem(r, state, 1);
 			++num_poems;
 			return REQUEST_POEM;
 		}
-		else if (strcmp(value, "/boem") == 0) {
+		else if (strcmp(value, "/b") == 0) {
 			return_poem(r, state, 0);
 			++num_boems;
 			return REQUEST_BOEM;

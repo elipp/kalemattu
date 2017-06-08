@@ -177,13 +177,13 @@ int str_hasanyof(const wchar_t* str, const wchar_t* chars) {
 
 
 wchar_t *capitalize_first_nodup(wchar_t *str) {
-	str[0] = toupper(str[0]);
+	str[0] = towupper(str[0]);
 	return str;
 }
 
 wchar_t *capitalize_first_dup(wchar_t *str) {
 	wchar_t *dup = wcsdup(str);
-	dup[0] = toupper(dup[0]);
+	dup[0] = towupper(dup[0]);
 
 	return dup;
 }
