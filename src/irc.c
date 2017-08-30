@@ -62,9 +62,10 @@ static void event_channel_callback(irc_session_t *session, const char *event, co
 
 	fprintf(stderr, "event: %s, channel: %s: message: %s\n", event, params[0], params[1]);
 
+	kstate_t s;
+	memset(&s, 0, sizeof(s));
+
 	if (strstr(params[1], "!poem") == params[1]) {
-		kstate_t s;
-		memset(&s, 0, sizeof(s));
 		s.rules_apply = 1;
 		poem_t poem = generate_poem(&s);
 
@@ -73,8 +74,6 @@ static void event_channel_callback(irc_session_t *session, const char *event, co
 		poem_free(&poem);
 	}
 	else if (strstr(params[1], "!boem") == params[1]) {
-		kstate_t s;
-		memset(&s, 0, sizeof(s));
 		s.rules_apply = 0;
 
 		poem_t poem = generate_poem(&s);
@@ -82,6 +81,14 @@ static void event_channel_callback(irc_session_t *session, const char *event, co
 		send_poem_to_channel(&poem, params[0]);
 
 		poem_free(&poem);
+	}
+	else if (strstr(params[1] "!noem") == params[1]) {
+		poem_t poem = generate_poem(&s);
+
+		send_poem_to_channel(&poem, params[0]);
+
+		poem_free(&poem);
+
 	}
 
 }

@@ -9,26 +9,27 @@
 #include "aesthetics.h"
 #include "dict.h"
 #include "stringutil.h"
+#include "synth.h"
 
 static const vcp_t VC_PATTERNS[] = {
-    {"V", '1'},
-    {"VC",'1'},
-    {"VV", '2' },
-    {"VVC", '2' },
-    {"VCC", '1' },
-    {"CV", '1' },
-    {"CVC", '1' },
-    {"CVV", '2' },
-    {"CVVC", '2' },
-    {"CVCC", '1' },
-    {"CCV", '1' },
-    {"CCVC", '1' },
-    {"CCVV", '2' },
-    {"CCVVC", '2' },
-    {"CCVCC", '1' },
-    {"CCCVC", '1' },
-    {"CCCVCC", '1' },
-    { NULL, '0'}
+    {"V", 1},
+    {"VC",1 },
+    {"VV", 2 },
+    {"VVC", 2 },
+    {"VCC", 1 },
+    {"CV", 1 },
+    {"CVC", 1 },
+    {"CVV", 2 },
+    {"CVVC", 2 },
+    {"CVCC", 1 },
+    {"CCV", 1 },
+    {"CCVC", 1 },
+    {"CCVV", 2 },
+    {"CCVVC", 2 },
+    {"CCVCC", 1 },
+    {"CCCVC", 1 },
+    {"CCCVCC", 1 },
+    { NULL, 0}
 };
 
 static const wchar_t* DIPHTHONGS[] = {
@@ -183,9 +184,14 @@ bool ends_in_wrong_vowelcombo(const wchar_t *str) {
 
 static const wchar_t *vowels = L"aeiouyäöå";
 
+bool is_vowel(wchar_t c) {
+	if (wcschr(vowels, c)) return true;
+	else return false;
+}
+
 char vc_map(wchar_t c) {
 	if (iswalpha(c)) {
-		if (wcschr(vowels, c)) {
+		if (is_vowel(c)) {
 			return 'V';
 		}
 		else return 'C';
@@ -266,7 +272,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 }
 
-int make_valid_word(wchar_t *buffer, long num_syllables) {
+int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sylsource) {
 
 	int vharm_state = 0;
 	wchar_t prev_first_c = L'\0';
@@ -276,8 +282,9 @@ int make_valid_word(wchar_t *buffer, long num_syllables) {
 	for (int n = 0; n < num_syllables; ++n) {
 		bool ignore_last = (n == 0);
 
-		const syl_t *syl = dict_get_random_syllable_any(ignore_last);
-		const wchar_t *s = syl->chars;
+		//syl_t syl = dict_get_random_syllable_any(ignore_last);
+		syl_t syl = sylsource(ignore_last);
+		const wchar_t *s = syl.chars;
 
 		int syl_vharm = get_vowel_harmony_state(s);
 
@@ -289,7 +296,7 @@ int make_valid_word(wchar_t *buffer, long num_syllables) {
 			if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
 				goto new_syllable;
 			}
-			else if (n > 0 && syl->length < 2) {
+			else if (n > 0 && syl.length < 2) {
 				goto new_syllable;
 			}
 			else if (sylvec_contains(&new_syllables, s)) {
@@ -315,7 +322,7 @@ int make_valid_word(wchar_t *buffer, long num_syllables) {
 
 new_syllable:
 			syl = dict_get_random_syllable_any(ignore_last);
-			s = syl->chars;
+			s = syl.chars;
 
 			free(concatd);
 
@@ -341,8 +348,8 @@ new_syllable:
 
 int make_any_word(wchar_t *buffer, long num_syllables) {
 	for (int i = 0; i < num_syllables; ++i) {
-		const syl_t *syl = dict_get_random_syllable_any(false);
-		wcscat(buffer, syl->chars);
+		const syl_t syl = dict_get_random_syllable_any(false);
+		wcscat(buffer, syl.chars);
 	}
 
 	return 1;

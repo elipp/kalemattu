@@ -63,12 +63,13 @@ int strvec_push(strvec_t* vec, const wchar_t* str) {
 	return 1;
 }
 
-static syl_t syl_create(const wchar_t* syl, char length_class) {
+syl_t syl_create(const wchar_t* syl, int length_class) {
 	syl_t s;
 
 	s.chars = wcsdup(syl);
 	s.length = wcslen(syl);
-	s.length_class = length_class;
+	s.vcp.length_class = length_class;
+	s.vcp.pattern = get_vc_pattern(syl);
 
 	return s;
 }
@@ -331,9 +332,9 @@ const word_t *dict_get_random_word() {
 	return &dictionary.words[get_random(0, dictionary.num_words)];
 }
 
-static syl_t *get_random_syllable_from_word(const word_t *w, bool ignore_last) {
+static syl_t get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 //	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
-	if (w->syllables.length == 1) { return &w->syllables.syllables[0]; }
+	if (w->syllables.length == 1) { return w->syllables.syllables[0]; }
 
 	long max;
 	if (ignore_last) max = w->syllables.length - 1;
@@ -342,16 +343,16 @@ static syl_t *get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 	long r = get_random(0, max);
 
 //	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
-	return &w->syllables.syllables[r];	
+	return w->syllables.syllables[r];	
 }
 
-const syl_t *dict_get_random_syllable_any(bool ignore_last) {
+syl_t dict_get_random_syllable_any(bool ignore_last) {
 	const word_t *w = dict_get_random_word();
 	while (w->syllables.length == 1) {
 		w = dict_get_random_word();
 	}
 
-	syl_t *s = get_random_syllable_from_word(w, ignore_last);
+	syl_t s = get_random_syllable_from_word(w, ignore_last);
 
 	return s;
 }

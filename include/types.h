@@ -15,7 +15,7 @@ typedef struct strvec_t {
 
 typedef struct vcp_t {
 	const char* pattern;
-	char length_class;
+	int length_class;
 } vcp_t;
 
 typedef struct kstate_t {
@@ -27,6 +27,7 @@ typedef struct kstate_t {
 	char* const* irc_channels;
 	const char* irc_nick;
 	long num_irc_channels;
+	int synth_enabled;
 
 	int fcgi_enabled;
 	const char* fcgi_addr;
@@ -34,8 +35,8 @@ typedef struct kstate_t {
 
 typedef struct syl_t {
 	wchar_t *chars;
-	long length;
-	char length_class;
+	int length;
+	vcp_t vcp;
 } syl_t;
 
 typedef struct sylvec_t {
@@ -71,5 +72,7 @@ typedef struct aesthetics_t {
 	int vowel_harmony;
 
 } aesthetics_t;
+
+typedef syl_t (*SYLLABLE_SOURCE_FUNC)(bool);
 
 #endif

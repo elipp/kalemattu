@@ -18,6 +18,8 @@
 // (sprint.teri).[84]
 
 
+bool is_vowel(wchar_t c);
+
 char vc_map(wchar_t c);
 const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
@@ -28,7 +30,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
 wchar_t get_first_consonant(const wchar_t *str);
 
-int make_valid_word(wchar_t *buffer, long num_syllables);
+int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sylsource);
 int make_any_word(wchar_t *buffer, long num_syllables);
 
 bool has_diphthong(const wchar_t* syllable); 

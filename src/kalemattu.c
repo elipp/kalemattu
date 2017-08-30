@@ -53,7 +53,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 
 	opterr = 0;
 	int c;
-	while ((c = getopt (argc, argv, "cls:n:i:N:f:")) != -1) {
+	while ((c = getopt (argc, argv, "clSs:n:i:N:f:")) != -1) {
 		switch (c)
 		{
 			case 'c':
@@ -70,6 +70,9 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 				}
 				break;
 			}
+			case 'S':
+				 state->synth_enabled = 1;
+				 break;
 			case 's':
 				state->numeric_seed = hash((unsigned char*)optarg);
 				break;
@@ -127,6 +130,7 @@ kstate_t get_default_state() {
 	defaults.irc_nick = NULL;
 	defaults.num_irc_channels = 0;
 	defaults.fcgi_enabled = 0;
+	defaults.synth_enabled = 0;
 
 	return defaults;
 }
