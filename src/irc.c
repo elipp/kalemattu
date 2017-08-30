@@ -82,7 +82,9 @@ static void event_channel_callback(irc_session_t *session, const char *event, co
 
 		poem_free(&poem);
 	}
-	else if (strstr(params[1] "!noem") == params[1]) {
+	else if (strstr(params[1], "!noem") == params[1]) {
+		s.rules_apply = 1;
+		s.synth_enabled = 1;
 		poem_t poem = generate_poem(&s);
 
 		send_poem_to_channel(&poem, params[0]);
