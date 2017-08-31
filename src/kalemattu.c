@@ -171,9 +171,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (!state.irc_enabled && !state.fcgi_enabled) { 
-		poem_t poem = generate_poem(&state);
-		poem_print(&poem);
-		poem_free(&poem);
+		for (int i = 0; i < 1024; ++i) {
+			poem_t poem = generate_poem(&state);
+			//poem_print(&poem);
+			poem_free(&poem);
+		}
 		return 0;
 	}
 

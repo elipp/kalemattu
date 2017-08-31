@@ -10,6 +10,7 @@ const word_t *dict_get_random_word();
 syl_t dict_get_random_syllable_any(bool ignore_last);
 
 syl_t syl_create(const wchar_t *w, int length_class);
+void syl_free(syl_t *s);
 
 sylvec_t sylvec_create(); 
 int sylvec_contains(sylvec_t *s, const wchar_t *str);

@@ -14,7 +14,7 @@ typedef struct strvec_t {
 } strvec_t;
 
 typedef struct vcp_t {
-	const char* pattern;
+	char* pattern;
 	int length_class;
 } vcp_t;
 

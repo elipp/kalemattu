@@ -74,6 +74,11 @@ syl_t syl_create(const wchar_t* syl, int length_class) {
 	return s;
 }
 
+void syl_free(syl_t *s) {
+	free(s->chars);
+	free(s->vcp.pattern);
+}
+
 sylvec_t sylvec_create() {
 	sylvec_t s;
 	memset(&s, 0, sizeof(s));
@@ -155,7 +160,7 @@ wchar_t *sylvec_get_word(sylvec_t *s) {
 
 void sylvec_destroy(sylvec_t *s) {
 	for (int i = 0; i < s->length; ++i) {
-		free(s->syllables[i].chars);
+		syl_free(&s->syllables[i]);
 	}
 	free(s->syllables);
 }

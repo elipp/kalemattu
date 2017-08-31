@@ -321,12 +321,14 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sy
 			}
 
 new_syllable:
-			syl = dict_get_random_syllable_any(ignore_last);
+			syl_free(&syl);
+			syl = sylsource(ignore_last);
 			s = syl.chars;
 
 			free(concatd);
 
 		}
+
 
 		if (vharm_state == 0) {
 			// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
@@ -337,6 +339,7 @@ new_syllable:
 
 		sylvec_pushstr(&new_syllables, s);
 		wcscat(buffer, s);
+		syl_free(&syl);
 
 	}
 
