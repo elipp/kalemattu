@@ -272,7 +272,7 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 }
 
-int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sylsource) {
+int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE) {
 
 	int vharm_state = 0;
 	wchar_t prev_first_c = L'\0';
@@ -283,7 +283,7 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sy
 		bool ignore_last = (n == 0);
 
 		//syl_t syl = dict_get_random_syllable_any(ignore_last);
-		syl_t syl = sylsource(ignore_last);
+		syl_t syl = SYLLABLE_SOURCE(ignore_last);
 		const wchar_t *s = syl.chars;
 
 		int syl_vharm = get_vowel_harmony_state(s);
@@ -293,7 +293,9 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sy
 			wchar_t *concatd = wstring_concat(buffer, s);
 			syl_vharm = get_vowel_harmony_state(s);
 
-			if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
+			if (syl_vharm == 0x3) goto new_syllable; // this means the vharm was mixed
+
+			else if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
 				goto new_syllable;
 			}
 			else if (n > 0 && syl.length < 2) {
@@ -322,7 +324,7 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC sy
 
 new_syllable:
 			syl_free(&syl);
-			syl = sylsource(ignore_last);
+			syl = SYLLABLE_SOURCE(ignore_last);
 			s = syl.chars;
 
 			free(concatd);
