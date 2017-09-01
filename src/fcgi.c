@@ -29,14 +29,12 @@ extern int running;
 static int num_poems = 0;
 static int num_boems = 0;
 
-static void return_poem(FCGX_Request *r, kstate_t *state, int rules_apply) {
-	FCGX_FPrintF(r->out, "Content-Type: text/plain; charset=utf-8\r\n\r\n");
-
-	state->rules_apply = rules_apply;
+static void return_poem(FCGX_Request *r, kstate_t *state) {
+	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
 
 	poem_t poem = generate_poem(state);
 	int poemlen_bytes;
-	char* p = poem_print_to_buffer(&poem, &poemlen_bytes);
+	char* p = poem_print_to_fcgi_buffer(&poem, &poemlen_bytes);
 	FCGX_PutStr(p, poemlen_bytes, r->out);
 	poem_free(&poem);
 	free(p);
@@ -77,6 +75,7 @@ enum {
 
 	REQUEST_POEM = 1,
 	REQUEST_BOEM = 3,
+	REQUEST_NOEM = 5,
 
 	REQUEST_TITLE_PAGE = 2,
 	REQUEST_FAVICON = 4,
@@ -87,29 +86,43 @@ enum {
 static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
         char *value;
 
-	 if ((value = FCGX_GetParam("REQUEST_URI", r->envp)) != NULL) {
-		 if (strcmp(value, "/") == 0) {
+	if ((value = FCGX_GetParam("REQUEST_URI", r->envp)) != NULL) {
+		if (strcmp(value, "/") == 0) {
 			return_titlepage(r);
 			return REQUEST_TITLE_PAGE;
-		 }
-		 else if (strcmp(value, "/favicon.ico") == 0) {
+		}
+		else if (strcmp(value, "/favicon.ico") == 0) {
 			FCGX_FPrintF(r->out, "\n");
 			return REQUEST_FAVICON;
-		 }
-		 else if (strcmp(value, "/p") == 0) {
-			return_poem(r, state, 1);
+		}
+		else if (strcmp(value, "/p") == 0) {
+			state->synth_enabled = 0;
+			state->rules_apply = 1;
+			return_poem(r, state);
+
 			++num_poems;
 			return REQUEST_POEM;
 		}
+		else if (strcmp(value, "/n") == 0) {
+			state->synth_enabled = 1;
+			state->rules_apply = 1;
+			return_poem(r, state);
+
+			++num_poems;
+			return REQUEST_NOEM;
+		}
 		else if (strcmp(value, "/b") == 0) {
-			return_poem(r, state, 0);
+			state->synth_enabled = 0;
+			state->rules_apply = 0;
+			return_poem(r, state);
+
 			++num_boems;
 			return REQUEST_BOEM;
 		}
-		 else {
+		else {
 			return REQUEST_UNKNOWN;
-		 }
-        }
+		}
+	}
 
 
 	 return REQUEST_IRRELEVANT;

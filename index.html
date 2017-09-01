@@ -4,11 +4,35 @@
 <head>
 	<title>o</title>
 	<meta charset="utf-8">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 </head>
 <body>
-	<a href="p">p</a>
+
+<!--	<a href="p">p</a> 
 	<a href="b">b</a>
+-->
+
+<div>
+	<button id="poem">poem</button>
+	<button id="boem">boem</button>
+	<button id="noem">noem</button>
+</div>
+
+<div id='poemfield'>
+
+</div>
+
+
 </body>
+
+<script type="text/javascript">
+$(document).ready(function(){
+	$('#poem').click(function(){ $.ajax({ type: 'GET', url: 'p', success: function(data) { $('#poemfield').html(data); } }); });
+	$('#boem').click(function(){ $.ajax({ type: 'GET', url: 'b', success: function(data) { $('#poemfield').html(data); } }); });
+	$('#noem').click(function(){ $.ajax({ type: 'GET', url: 'n', success: function(data) { $('#poemfield').html(data); } }); });
+
+});
+</script>
+
+
 </html>
-
-

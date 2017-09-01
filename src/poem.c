@@ -87,7 +87,10 @@ static int add_punctuation(wchar_t *buffer, bool last_verse, bool last_word) {
 	return 1;
 }
 
-static wchar_t *generate_random_verse(long num_words, bool last_verse, const kstate_t *state, foot_t *foot) {
+static verse_t generate_random_verse(long num_words, bool last_verse, const kstate_t *state, foot_t *foot) {
+
+	verse_t verse;
+
 	wchar_t new_verse[2048];
 	new_verse[0] = L'\0';
 
@@ -103,31 +106,34 @@ static wchar_t *generate_random_verse(long num_words, bool last_verse, const kst
 
 	}
 
-	return wcsdup(new_verse);
+	verse.verse = wcsdup(new_verse);
+	verse.length = wcslen(new_verse);
+
+	return verse;
 	
 }
 
-static wchar_t *generate_random_stanza(long num_verses, kstate_t *state) {
+static void stanza_free(stanza_t *s) {
+	for (int i = 0; i < s->num_verses; ++i) {
+		free(s->verses[i].verse);
+	}
+
+	free(s->verses);
+}
+
+static stanza_t generate_random_stanza(long num_verses, kstate_t *state) {
+
+	stanza_t s;
+	s.verses = malloc(num_verses*sizeof(verse_t));
+	s.num_verses = num_verses;
 
 	wchar_t new_stanza[4096];
 	memset(new_stanza, 0, sizeof(new_stanza));
 	for (int i = 0; i < num_verses; ++i) {
-		wcscat(new_stanza, L"\n");
-		wchar_t *new_verse = generate_random_verse(4, i == num_verses - 1, state, NULL);
-		wcscat(new_stanza, new_verse);
-
-		if (state->LaTeX_output) {
-			wcscat(new_stanza, L" \\\\");
-		}
-
-		free(new_verse);
+		s.verses[i] = generate_random_verse(4, i == num_verses - 1, state, NULL);
 	}
 
-	if (state->LaTeX_output) { 
-		wcscat(new_stanza, L"!\n\n");
-	}
-
-	return wcsdup(new_stanza);
+	return s;
 
 }
 
@@ -154,7 +160,7 @@ poem_t generate_poem(kstate_t *state) {
 	poem.title = capitalize_first_nodup(title);
 
 	poem.num_stanzas = gauss_noise_with_limit(2, 0.60, 1, 3);
-	poem.stanzas = malloc(poem.num_stanzas * sizeof(wchar_t*));
+	poem.stanzas = malloc(poem.num_stanzas * sizeof(stanza_t));
 
 	for (int i = 0; i < poem.num_stanzas; ++i) {
 		int num_verses = gauss_noise_with_limit(4, 1, 1, 4);
@@ -204,10 +210,24 @@ static void print_latex_title_page(const wchar_t* poetname) {
 
 }
 
-void print_as_latex_document(const wchar_t* poem, const wchar_t *poetname) {
+static void poem_print_LaTeX(const poem_t *poem) {
+static const char *pre = "\\poemtitle{%ls}\n\\settowidth{\\versewidth}{levaton, lsitan kylpaa ranjoskan asdf}\n\\begin{verse}[\\versewidth]\n";
+static const char *post = "\\end{verse}\n\\newpage\n\n";
+	printf(pre, poem->title);
+
+	for (int i = 0; i < poem->num_stanzas; ++i) {
+		wchar_t *stanza = get_stanza(&poem->stanzas[i], POEM_FORMAT_LATEX);
+		printf("%ls\n", stanza);
+		free(stanza);
+	}
+
+	puts(post);
+}
+
+void print_as_latex_document(const poem_t* poem, const wchar_t *poetname) {
 	print_latex_preamble();
 	print_latex_title_page(poetname);
-	printf("%ls", poem);
+	poem_print_LaTeX(poem);
 	printf("\\end{document}");
 
 }
@@ -239,57 +259,121 @@ void print_as_latex_document(const wchar_t* poem, const wchar_t *poetname) {
 //
 //}
 
-void poem_print(const poem_t *poem) {
+void poem_print(const poem_t *poem, int format) {
 
+	switch (format) {
+		case POEM_FORMAT_VANILLA:
+		case POEM_FORMAT_IRC:
+			printf("%ls\n\n", poem->title);
+			break;
+		case POEM_FORMAT_HTML:
+			printf("<h1>%ls</h1>\r\n", poem->title);
+			break;
+		case POEM_FORMAT_LATEX:
+			poem_print_LaTeX(poem);
+			return;
+		default:
+			printf("poem_print: invalid format %d\n", format);
+			return;
 
-	printf("%ls\n", poem->title);
+	}
 
 	for (int i = 0; i < poem->num_stanzas; ++i) {
-		printf("%ls\n", poem->stanzas[i]);
+		wchar_t *stanza = get_stanza(&poem->stanzas[i], format);
+		printf("%ls\n", stanza);
+		free(stanza);
 	}
 
 	printf("\n");
 
 }
 
-char* poem_print_to_buffer(const poem_t *poem, int *len) {
+char* poem_print_to_fcgi_buffer(const poem_t *poem, int *len) {
 #define BUFFER_SIZE_DEFAULT 8096
 	int buf_size = BUFFER_SIZE_DEFAULT;
 	char *buffer = malloc(buf_size); 
+	buffer[0] = '\0';
 
-	int offset = sprintf(buffer, "%ls\n", poem->title);
+	int offset = sprintf(buffer, "<h1>%ls</h1>\n", poem->title);
 
 	for (int i = 0; i < poem->num_stanzas; ++i) {
 		if (offset + 512 > buf_size) {
 			buf_size *= 2;
 			buffer = realloc(buffer, buf_size);
 		}
-		offset += sprintf(buffer + offset, "%ls\n", poem->stanzas[i]);
+		wchar_t *stanza = get_stanza(&poem->stanzas[i], POEM_FORMAT_HTML);
+		offset += sprintf(buffer + offset, "%ls", stanza);
+		free(stanza);
 	}
 
-	offset += sprintf(buffer + offset, "\n");
+	offset += sprintf(buffer + offset, "\r\n");
 	*len = offset;
 
 	return buffer;
 
 }
 
-void poem_print_LaTeX(const poem_t *poem) {
-static const char *pre = "\\poemtitle{%ls}\n\\settowidth{\\versewidth}{levaton, lsitan kylpaa ranjoskan asdf}\n\\begin{verse}[\\versewidth]\n";
-static const char *post = "\\end{verse}\n\\newpage\n\n";
-	printf(pre, poem->title);
 
-	for (int i = 0; i < poem->num_stanzas; ++i) {
-		printf("%ls\n", poem->stanzas[i]);
-	}
-
-	puts(post);
-}
 
 void poem_free(poem_t *poem) {
 	free(poem->title);
 	for (int i = 0; i < poem->num_stanzas; ++i) {
-		free(poem->stanzas[i]);
+		stanza_free(&poem->stanzas[i]);
 	}
+
 	free(poem->stanzas);
+}
+
+static long get_stanza_length(const stanza_t *s) {
+	long len = 0;
+	for (int i = 0; i < s->num_verses; ++i) {
+		len += s->verses[i].length;
+	}
+
+	return len;
+}
+
+wchar_t *get_stanza(const stanza_t *s, int format) {
+	long total_len = get_stanza_length(s);
+	long bufsize = total_len + 16*s->num_verses;
+	wchar_t *stanza = malloc(bufsize*sizeof(wchar_t)); // the 8*s->num_verses part is padding for \r\n<br></p> etc :D
+	stanza[0] = L'\0';
+
+	wchar_t *fmt = NULL;
+
+	switch(format) {
+		case POEM_FORMAT_VANILLA:
+			fmt = L"\n";
+			break;
+		case POEM_FORMAT_IRC:
+			fmt = L"\n";
+			break;
+		case POEM_FORMAT_LATEX:
+			fmt = L" \\\\ \n";
+			break;
+		case POEM_FORMAT_HTML:
+			fmt = L"<br>\r\n";
+			break;
+		default:
+			fmt = L"\n";
+			break;
+	}
+
+	if (format == POEM_FORMAT_HTML) {
+		wcscat(stanza, L"<p> ");
+	}
+
+	for (int i = 0; i < s->num_verses; ++i) {
+		wcscat(stanza, s->verses[i].verse);
+		wcscat(stanza, fmt);
+	}
+
+	if (format == POEM_FORMAT_HTML) {
+		wcscat(stanza, L" </p>");
+	}
+
+
+
+	return stanza;
+
 }

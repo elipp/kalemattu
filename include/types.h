@@ -51,6 +51,16 @@ typedef struct word_t {
 	sylvec_t syllables;
 } word_t;
 
+typedef struct verse_t {
+	wchar_t *verse;
+	long length;
+} verse_t;
+
+typedef struct stanza_t {
+	verse_t *verses;
+	long num_verses;
+} stanza_t;
+
 typedef struct dict_t {
 	word_t *words;
 	long num_words;
@@ -63,7 +73,7 @@ typedef struct foot_t {
 
 typedef struct poem_t {
 	wchar_t *title;
-	wchar_t **stanzas;
+	stanza_t *stanzas;
 	long num_stanzas;
 
 } poem_t;

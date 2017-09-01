@@ -353,8 +353,9 @@ new_syllable:
 
 int make_any_word(wchar_t *buffer, long num_syllables) {
 	for (int i = 0; i < num_syllables; ++i) {
-		const syl_t syl = dict_get_random_syllable_any(false);
+		syl_t syl = dict_get_random_syllable_any(false);
 		wcscat(buffer, syl.chars);
+		syl_free(&syl);
 	}
 
 	return 1;

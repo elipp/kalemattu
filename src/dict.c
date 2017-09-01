@@ -337,8 +337,17 @@ const word_t *dict_get_random_word() {
 	return &dictionary.words[get_random(0, dictionary.num_words)];
 }
 
+static syl_t syl_duplicate(const syl_t *s) {
+	syl_t r;
+	r.chars = wcsdup(s->chars);
+	r.length = s->length;
+	r.vcp.pattern = strdup(s->vcp.pattern);
+	r.vcp.length_class = s->vcp.length_class;
+
+	return r;
+}
+
 static syl_t get_random_syllable_from_word(const word_t *w, bool ignore_last) {
-//	if (w->syllables.length == 0) { printf("FUCCCKKK\n"); return NULL; }
 	if (w->syllables.length == 1) { return w->syllables.syllables[0]; }
 
 	long max;
@@ -347,8 +356,7 @@ static syl_t get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 
 	long r = get_random(0, max);
 
-//	printf("get_random_syllable_from_word: word = %ls, returning syllable %ld\n", w->chars, r);
-	return w->syllables.syllables[r];	
+	return syl_duplicate(&w->syllables.syllables[r]);
 }
 
 syl_t dict_get_random_syllable_any(bool ignore_last) {

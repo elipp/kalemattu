@@ -172,7 +172,8 @@ int main(int argc, char *argv[]) {
 
 	if (!state.irc_enabled && !state.fcgi_enabled) { 
 		poem_t poem = generate_poem(&state);
-		poem_print(&poem);
+		poem_print(&poem, state.LaTeX_output ? POEM_FORMAT_LATEX : POEM_FORMAT_VANILLA);
+//		poem_print(&poem, POEM_FORMAT_HTML);
 		poem_free(&poem);
 		return 0;
 	}

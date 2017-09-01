@@ -51,9 +51,12 @@ static void send_poem_to_channel(const poem_t *poem, const char* channel) {
 	free(converted);
 
 	for (int i = 0; i < poem->num_stanzas; ++i) {
-		converted = convert_to_multibyte(poem->stanzas[i], wcslen(poem->stanzas[i]));
+		wchar_t *stanza = get_stanza(&poem->stanzas[i], POEM_FORMAT_IRC);
+		converted = convert_to_multibyte(stanza, wcslen(stanza));
 		send_multiline_message(converted, channel);
 		irc_cmd_msg(irc_session, channel, " ");
+
+		free(stanza);
 		free(converted);
 	}
 }
