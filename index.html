@@ -4,12 +4,11 @@
 <head>
 	<title>o</title>
 	<meta charset="utf-8">
-	<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-
-
+	<link href="http://unicorn-ui.com/buttons/css/buttons.css" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css?family=Crimson+Text" rel="stylesheet">
+
 	<style>
 	* { font-family: 'Crimson Text', serif; }
 	#buttons {
@@ -52,11 +51,6 @@
 		font-size: 1.3em;
 	}
 	
-	button {
-		min-width: 2.2em;
-		font-size: 1.0em;
-	}
-
 	aside {
 		font-size: 0.5em;
 		color: #999;
@@ -68,10 +62,10 @@
 <body>
 
 <div class="content" id='buttons'>
-	<button id="poem">p</button>
-	<button id="boem">b</button>
-	<button id="noem">n</button> 
-	<button id="moem">m</button> 
+	<button class="button  button-rounded button-small" id="poem">p</button>
+	<button class="button  button-rounded button-small" id="boem">b</button>
+	<button class="button  button-rounded button-small" id="noem">n</button> 
+	<button class="button  button-rounded button-small" id="moem">m</button> 
 
 <!--	<button class="pure-button" id="poem">poem</button>
 	<button class="pure-button" id="boem">boem</button>
@@ -86,16 +80,32 @@
 </div>
 
 <div id='gitrev'> 
-	<aside>git revision: 3c517fa168e17f23e3b6708c06af08a10ce3bcb5</aside>
+	<aside>git revision: 31e1e88</aside>
 </div>
 
 <script type="text/javascript">
-$(document).ready(function(){
-	$('#poem').click(function(){ $.ajax({ type: 'GET', url: 'p', success: function(data) { $('#poemfield').html(data); } }); });
-	$('#boem').click(function(){ $.ajax({ type: 'GET', url: 'b', success: function(data) { $('#poemfield').html(data); } }); });
-	$('#noem').click(function(){ $.ajax({ type: 'GET', url: 'n', success: function(data) { $('#poemfield').html(data); } }); });
-	$('#moem').click(function(){ $.ajax({ type: 'GET', url: 'm', success: function(data) { $('#poemfield').html(data); } }); });
 
+function add_gethook_to_button(buttonid, uri) {
+	var btn = document.getElementById(buttonid);
+
+	btn.addEventListener('click', function() {
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.onreadystatechange = function() { 
+			if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+				document.getElementById('poemfield').innerHTML = xmlHttp.responseText;
+			}
+		}
+		xmlHttp.open("GET", uri, true); // true for asynchronous 
+		xmlHttp.send(null);
+	}, false);
+
+}
+
+document.addEventListener("DOMContentLoaded", function(event) {
+	add_gethook_to_button("poem", "p");
+	add_gethook_to_button("boem", "b");
+	add_gethook_to_button("noem", "n");
+	add_gethook_to_button("moem", "m");
 });
 
 </script>

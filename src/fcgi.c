@@ -91,6 +91,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 
 	if ((value = FCGX_GetParam("REQUEST_URI", r->envp)) != NULL) {
 		if (strcmp(value, "/") == 0) {
+			//FCGX_FPrintF(r->out, "\n");
 			return_titlepage(r);
 			return REQUEST_TITLE_PAGE;
 		}

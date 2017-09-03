@@ -8,7 +8,7 @@ SRCDIR=src
 
 LIBS=-lm -lpthread -lircclient -lfcgi
 DEPS=include/types.h
-REV=$(shell git rev-parse HEAD)
+REV=$(shell git rev-parse --short HEAD)
 
 _OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o fcgi.o synth.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))

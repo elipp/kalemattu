@@ -98,6 +98,7 @@ L"vj", L"vl", L"dr", L"vk", L"ds",
 L"js", L"dp", L"jh", L"dn", L"jl",
 L"jm", L"jj", L"vv", L"jk", L"vd",
 L"dv", L"jd", L"sd", L"vr", L"vh",
+L"vp", L"dh", L"dj", L"pd", 
 NULL
 };
 
