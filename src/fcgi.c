@@ -28,6 +28,8 @@ extern int running;
 
 static int num_poems = 0;
 static int num_boems = 0;
+static int num_noems = 0;
+static int num_moems = 0;
 
 static void return_poem(FCGX_Request *r, kstate_t *state) {
 	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
@@ -76,6 +78,7 @@ enum {
 	REQUEST_POEM = 1,
 	REQUEST_BOEM = 3,
 	REQUEST_NOEM = 5,
+	REQUEST_MOEM = 7,
 
 	REQUEST_TITLE_PAGE = 2,
 	REQUEST_FAVICON = 4,
@@ -108,7 +111,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 			state->rules_apply = 1;
 			return_poem(r, state);
 
-			++num_poems;
+			++num_noems;
 			return REQUEST_NOEM;
 		}
 		else if (strcmp(value, "/b") == 0) {
@@ -119,6 +122,15 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 			++num_boems;
 			return REQUEST_BOEM;
 		}
+		else if (strcmp(value, "/m") == 0) {
+			state->synth_enabled = 1;
+			state->rules_apply = 0;
+			return_poem(r, state);
+
+			++num_moems;
+			return REQUEST_MOEM;
+		}
+
 		else {
 			return REQUEST_UNKNOWN;
 		}
@@ -170,7 +182,7 @@ static void *run_fcgi(void *arg) {
 		FCGX_Finish_r(&request);
 
 		if (r & REQUEST_POEM) {
-			fprintf(stderr, "[%s] p + b = %d + %d = %d\n", get_timestring(), num_poems, num_boems, num_poems + num_boems);
+			fprintf(stderr, "[%s] p/b/n/m = %d/%d/%d/%d = %d\n", get_timestring(), num_poems, num_boems, num_noems, num_moems, num_poems + num_boems + num_noems + num_moems);
 		}
 
 	}

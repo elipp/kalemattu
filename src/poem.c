@@ -36,13 +36,15 @@ static int construct_random_word(long max_syllables, const kstate_t *state, wcha
 	if (num_syllables == 1) {
 		wcscat(buffer, get_single_syllable_word()->chars);
 		return 1;
-	} 
+	}
+       
+	SYLLABLE_SOURCE_FUNC SYLSOURCE = state->synth_enabled ? &synth_get_syllable : &dict_get_random_syllable_any;
 	
 	if (state->rules_apply) {
-		make_valid_word(buffer, num_syllables, state->synth_enabled ? &synth_get_syllable : &dict_get_random_syllable_any);
+		make_valid_word(buffer, num_syllables, SYLSOURCE);
 	}
 	else {
-		make_any_word(buffer, num_syllables);
+		make_any_word(buffer, num_syllables, SYLSOURCE);
 	}
 
 	if (wcslen(buffer) < 2) {
@@ -267,7 +269,7 @@ void poem_print(const poem_t *poem, int format) {
 			printf("%ls\n\n", poem->title);
 			break;
 		case POEM_FORMAT_HTML:
-			printf("<h1>%ls</h1>\r\n", poem->title);
+			printf("<h2>%ls</h2>\r\n", poem->title);
 			break;
 		case POEM_FORMAT_LATEX:
 			poem_print_LaTeX(poem);
@@ -294,7 +296,7 @@ char* poem_print_to_fcgi_buffer(const poem_t *poem, int *len) {
 	char *buffer = malloc(buf_size); 
 	buffer[0] = '\0';
 
-	int offset = sprintf(buffer, "<h1>%ls</h1>\n", poem->title);
+	int offset = sprintf(buffer, "<h3>%ls</h3>\n", poem->title);
 
 	for (int i = 0; i < poem->num_stanzas; ++i) {
 		if (offset + 512 > buf_size) {

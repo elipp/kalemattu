@@ -4,18 +4,54 @@
 <head>
 	<title>o</title>
 	<meta charset="utf-8">
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+	<link href="https://fonts.googleapis.com/css?family=Crimson+Text" rel="stylesheet">
+	<style>
+	* { font-family: 'Crimson Text', serif; }
+	#buttons {
+		margin-top: 1em;
+		width: 100%%;
+		text-align: center;
+	}
+
+	#poemfield {
+		width: 100%%;
+		text-align: center;
+	}
+
+	body {
+		font-size: 150%%;
+	}
+
+	p {
+		font-size: 1em;
+	}
+
+	h3 {
+		font-size: 1.3em;
+	}
+
+
+	</style>
 </head>
 <body>
 
-<!--	<a href="p">p</a> 
-	<a href="b">b</a>
--->
+<div class="content" id='buttons'>
+	<button id="poem">p</button>
+	<button id="boem">b</button>
+	<button id="noem">n</button> 
+	<button id="moem">m</button> 
 
-<div>
-	<button id="poem">poem</button>
-	<button id="boem">boem</button>
-	<button id="noem">noem</button>
+<!--	<button class="pure-button" id="poem">poem</button>
+	<button class="pure-button" id="boem">boem</button>
+	<button class="pure-button" id="noem">noem</button>-->
+
+</div>
+
 </div>
 
 <div id='poemfield'>
@@ -30,6 +66,7 @@ $(document).ready(function(){
 	$('#poem').click(function(){ $.ajax({ type: 'GET', url: 'p', success: function(data) { $('#poemfield').html(data); } }); });
 	$('#boem').click(function(){ $.ajax({ type: 'GET', url: 'b', success: function(data) { $('#poemfield').html(data); } }); });
 	$('#noem').click(function(){ $.ajax({ type: 'GET', url: 'n', success: function(data) { $('#poemfield').html(data); } }); });
+	$('#moem').click(function(){ $.ajax({ type: 'GET', url: 'm', success: function(data) { $('#poemfield').html(data); } }); });
 
 });
 </script>

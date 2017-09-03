@@ -92,7 +92,13 @@ L"pm", L"mr", L"tg", L"mh", L"hp",
 L"kd", L"dk", L"dl", L"ld", L"mv", 
 L"vm", L"pr", L"hh", L"pn", L"tr",
 L"ts", L"ks", L"md", L"pj", L"jp",
-L"kg", L"pv", L"ph", NULL
+L"kg", L"pv", L"ph", L"jr", L"jv",
+L"dm", L"jn", L"vn", L"vt", L"jt",
+L"vj", L"vl", L"dr", L"vk", L"ds",
+L"js", L"dp", L"jh", L"dn", L"jl",
+L"jm", L"jj", L"vv", L"jk", L"vd",
+L"dv", L"jd", L"sd",
+NULL
 };
 
 bool has_forbidden_ccombos(const wchar_t* input) {
@@ -106,14 +112,29 @@ bool has_forbidden_ccombos(const wchar_t* input) {
 	return false;
 }
 
-static const wchar_t *FORBIDDEN_ENDCONSONANTS = L"pkrmhvsl";
+static const wchar_t *FORBIDDEN_BEGINCONSONANTS= L"bdcgqf";
+static const wchar_t *FORBIDDEN_ENDCONSONANTS = L"pkrmhvsljdg";
+
+bool has_forbidden_beginconsonant(const wchar_t *input) {
+	wchar_t c = input[0];
+
+	int i = 0;
+	while (i < wcslen(FORBIDDEN_BEGINCONSONANTS)) {
+		if (c == FORBIDDEN_BEGINCONSONANTS[i]) {
+			return true;
+		}
+		++i;
+	}
+
+	return false;
+}
 
 bool has_forbidden_endconsonant(const wchar_t *input) {
-	wchar_t l = input[wcslen(input)-1];
-	size_t i = 0;
+	wchar_t c = input[wcslen(input)-1];
+	int i = 0;
 
-	while (i < sizeof(FORBIDDEN_ENDCONSONANTS)) {
-		if (l == FORBIDDEN_ENDCONSONANTS[i]) { return true; }
+	while (i < wcslen(FORBIDDEN_ENDCONSONANTS)) {
+		if (c == FORBIDDEN_ENDCONSONANTS[i]) { return true; }
 		++i;
 	}
 
@@ -155,7 +176,7 @@ wchar_t get_first_consonant(const wchar_t *str) {
 }
 
 static const wchar_t *FORBIDDEN_VOWELENDINGS[] = {
-L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"äi", L"eu", NULL
+L"ai", L"ei", L"ou", L"ae", L"au", L"iu", L"oe", L"ue", L"äy", L"ii", L"yy", L"äi", L"eu", L"eo", L"ao", NULL
 };
 
 bool ends_in_wrong_vowelcombo(const wchar_t *str) {
@@ -282,7 +303,6 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SY
 	for (int n = 0; n < num_syllables; ++n) {
 		bool ignore_last = (n == 0);
 
-		//syl_t syl = dict_get_random_syllable_any(ignore_last);
 		syl_t syl = SYLLABLE_SOURCE(ignore_last);
 		const wchar_t *s = syl.chars;
 
@@ -293,9 +313,12 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SY
 			wchar_t *concatd = wstring_concat(buffer, s);
 			syl_vharm = get_vowel_harmony_state(s);
 
-			if (syl_vharm == 0x3) goto new_syllable; // this means the vharm was mixed
+			if (syl_vharm > 2) goto new_syllable; // this means the vharm was mixed
 
 			else if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
+				goto new_syllable;
+			}
+			else if (n == 0 && has_forbidden_beginconsonant(s)) {
 				goto new_syllable;
 			}
 			else if (n > 0 && syl.length < 2) {
@@ -351,9 +374,9 @@ new_syllable:
 
 }
 
-int make_any_word(wchar_t *buffer, long num_syllables) {
+int make_any_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE) {
 	for (int i = 0; i < num_syllables; ++i) {
-		syl_t syl = dict_get_random_syllable_any(false);
+		syl_t syl = SYLLABLE_SOURCE(false);
 		wcscat(buffer, syl.chars);
 		syl_free(&syl);
 	}
