@@ -19,9 +19,26 @@
 	}
 
 	#poemfield {
+		padding-top: 2em;
 		width: 100%%;
 		text-align: center;
 	}
+
+	#gitrev{
+		position: fixed;
+		bottom: 0.3em;
+		width: 100%%;
+		text-align: center;
+	}
+
+	@media screen and (max-width: 600px) {
+		#gitrev {
+			visibility: hidden;
+			clear: both;
+			display: none;
+		}
+	}
+
 
 	body {
 		font-size: 150%%;
@@ -33,6 +50,16 @@
 
 	h3 {
 		font-size: 1.3em;
+	}
+	
+	button {
+		min-width: 2.2em;
+		font-size: 1.0em;
+	}
+
+	aside {
+		font-size: 0.5em;
+		color: #999;
 	}
 
 
@@ -58,8 +85,9 @@
 
 </div>
 
-
-</body>
+<div id='gitrev'> 
+	<aside>git revision: 3c517fa168e17f23e3b6708c06af08a10ce3bcb5</aside>
+</div>
 
 <script type="text/javascript">
 $(document).ready(function(){
@@ -69,7 +97,11 @@ $(document).ready(function(){
 	$('#moem').click(function(){ $.ajax({ type: 'GET', url: 'm', success: function(data) { $('#poemfield').html(data); } }); });
 
 });
+
 </script>
+
+</body>
+
 
 
 </html>
