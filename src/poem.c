@@ -123,14 +123,12 @@ static void stanza_free(stanza_t *s) {
 	free(s->verses);
 }
 
-static stanza_t generate_random_stanza(long num_verses, kstate_t *state) {
+static stanza_t generate_random_stanza(long num_verses, const kstate_t *state) {
 
 	stanza_t s;
 	s.verses = malloc(num_verses*sizeof(verse_t));
 	s.num_verses = num_verses;
 
-	wchar_t new_stanza[4096];
-	memset(new_stanza, 0, sizeof(new_stanza));
 	for (int i = 0; i < num_verses; ++i) {
 		s.verses[i] = generate_random_verse(4, i == num_verses - 1, state, NULL);
 	}
@@ -139,7 +137,7 @@ static stanza_t generate_random_stanza(long num_verses, kstate_t *state) {
 
 }
 
-poem_t generate_poem(kstate_t *state) {
+poem_t generate_poem(const kstate_t *state) {
 
 	poem_t poem;
 	memset(&poem, 0, sizeof(poem));

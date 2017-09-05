@@ -9,6 +9,7 @@ SRCDIR=src
 LIBS=-lm -lpthread -lircclient -lfcgi
 DEPS=include/types.h
 REV=$(shell git rev-parse --short HEAD)
+COMMITDATE=$(shell git log -1 --date=format:'%d\\/%m\\/%Y' --format=%cd)
 
 _OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o fcgi.o synth.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
@@ -18,7 +19,7 @@ $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 kalemattuc: $(OBJ) $(SRCDIR)/kalemattu.c
-	sed -i "s/<aside>\(.*\)<\/aside>/<aside>git revision: $(REV)<\/aside>/g" index.html
+	sed -i "s/<aside>\(.*\)<\/aside>/<aside>git revision: $(REV) ($(COMMITDATE))<\/aside>/g" index.html
 	gcc -DREVISION=$(REV) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: clean

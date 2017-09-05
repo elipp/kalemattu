@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-poem_t generate_poem(kstate_t *state);
+poem_t generate_poem(const kstate_t *state);
 void print_as_latex_document(const poem_t* poem, const wchar_t *poetname);
 void poem_print(const poem_t *poem, int stanza_format);
 char *poem_print_to_fcgi_buffer(const poem_t *poem, int *len);
