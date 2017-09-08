@@ -7,7 +7,7 @@ int read_file_to_words(const char* filename);
 int add_words_to_dictionary(const word_t *words, size_t num_words); //nyt
 
 const word_t *dict_get_random_word();
-syl_t dict_get_random_syllable_any(bool ignore_last);
+syl_t dict_get_random_syllable_any(sylsrc_args_t *arg);
 
 syl_t syl_create(const wchar_t *w, int length_class);
 void syl_free(syl_t *s);

@@ -78,11 +78,20 @@ typedef struct poem_t {
 
 } poem_t;
 
-typedef struct aesthetics_t {
-	int vowel_harmony;
+typedef struct filter_state_t {
+	wchar_t prev_first_c;
+	int vharm;
+	sylvec_t new_syllables;
+	int syln;
+	int syln_target;
+} filter_state_t;
 
-} aesthetics_t;
+typedef struct sylsrc_args_t {
+	bool ignore_last;
+	int num_syllables;
+	int length_class;
+} sylsrc_args_t;
 
-typedef syl_t (*SYLLABLE_SOURCE_FUNC)(bool);
+typedef syl_t (*SYLLABLE_SOURCE_FUNC)(sylsrc_args_t *);
 
 #endif

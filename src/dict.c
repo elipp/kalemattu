@@ -170,6 +170,52 @@ static int word_push_syllable(word_t *w, const wchar_t *s) {
 	return 1;
 }
 
+static wchar_t *get_adjacent_consonants(const wchar_t *w, wchar_t c) {
+	const wchar_t *t = wcschr(w, c);
+	if (!t) return NULL;
+
+	if (t > w) {
+		const wchar_t *beg = t-1;
+		const wchar_t *end = t+1;
+		while (!is_vowel(*beg) && beg > w) {
+			--beg;
+		}
+		while (!is_vowel(*end) && (end-w) < wcslen(w)) {
+			++end;
+		}
+
+		wchar_t *r = malloc((end-beg+2) * sizeof(wchar_t));
+		const wchar_t *iter = beg+1;
+		int i = 0;
+		for (; i < end-beg-1; ++i) {
+			r[i] = *iter;
+			++iter;
+		}
+
+		r[i] = L'\0';
+		printf("%ls (%ls)\n", r, w);
+		return r;
+
+	} else {
+		return NULL;
+	}
+}
+
+static char *get_sylpattern(const word_t *word) {
+	char buffer[16];	
+	buffer[0] = '\0';
+
+	const sylvec_t *sv = &word->syllables;
+
+	for (int i = 0; i < sv->length; ++i) {
+		char n[8];
+		sprintf(n, "%d", sv->syllables[i].vcp.length_class);
+		strcat(buffer, n);
+	}
+
+	return strdup(buffer);
+}
+
 static void word_syllabify(word_t *word) {
 
 	size_t offset = 0;
@@ -215,6 +261,7 @@ static void word_syllabify(word_t *word) {
 	}
 
 	free(vc_pattern);
+
 
 }
 
@@ -359,11 +406,14 @@ static syl_t get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 	return syl_duplicate(&w->syllables.syllables[r]);
 }
 
-syl_t dict_get_random_syllable_any(bool ignore_last) {
+syl_t dict_get_random_syllable_any(sylsrc_args_t *arg) {
+
 	const word_t *w = dict_get_random_word();
 	while (w->syllables.length == 1) {
 		w = dict_get_random_word();
 	}
+
+	bool ignore_last = *(bool*)arg;
 
 	syl_t s = get_random_syllable_from_word(w, ignore_last);
 

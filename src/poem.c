@@ -37,11 +37,17 @@ static int construct_random_word(long max_syllables, const kstate_t *state, wcha
 		wcscat(buffer, get_single_syllable_word()->chars);
 		return 1;
 	}
-       
+
 	SYLLABLE_SOURCE_FUNC SYLSOURCE = state->synth_enabled ? &synth_get_syllable : &dict_get_random_syllable_any;
+
+	const char *sylp = NULL;
+	if (state->synth_enabled) {
+		sylp = synth_get_sylp(num_syllables);
+		printf("sylp: %s, num_syllables: %d\n", sylp, num_syllables);
+	}
 	
 	if (state->rules_apply) {
-		make_valid_word(buffer, num_syllables, SYLSOURCE);
+		make_valid_word(buffer, num_syllables, SYLSOURCE, sylp);
 	}
 	else {
 		make_any_word(buffer, num_syllables, SYLSOURCE);

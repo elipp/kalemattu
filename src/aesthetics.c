@@ -13,22 +13,22 @@
 
 static const vcp_t VC_PATTERNS[] = {
     {"V", 1},
-    {"VC",1 },
-    {"VV", 2 },
-    {"VVC", 2 },
-    {"VCC", 1 },
+    {"VC",2 },
+    {"VV", 3 },
+    {"VVC", 3 },
+    {"VCC", 2 },
     {"CV", 1 },
-    {"CVC", 1 },
-    {"CVV", 2 },
-    {"CVVC", 2 },
-    {"CVCC", 1 },
+    {"CVC", 2 },
+    {"CVV", 3 },
+    {"CVVC", 3 },
+    {"CVCC", 2 },
     {"CCV", 1 },
-    {"CCVC", 1 },
-    {"CCVV", 2 },
-    {"CCVVC", 2 },
-    {"CCVCC", 1 },
-    {"CCCVC", 1 },
-    {"CCCVCC", 1 },
+    {"CCVC", 2 },
+    {"CCVV", 3 },
+    {"CCVVC", 3 },
+    {"CCVCC", 2 },
+    {"CCCVC", 2 },
+    {"CCCVCC", 2 },
     { NULL, 0}
 };
 
@@ -52,6 +52,7 @@ static const wchar_t* NON_DIPHTHONGS[] = {
  L"uy", L"ya", L"yu", L"äu", L"uä",
  L"uö", L"öu", L"öa", L"aö", NULL
 };
+
 
 bool has_diphthong(const wchar_t* syllable) {
 	const wchar_t **d = &DIPHTHONGS[0];
@@ -101,6 +102,9 @@ L"dv", L"jd", L"sd", L"vr", L"vh",
 L"vp", L"dh", L"dj", L"pd", 
 NULL
 };
+
+
+
 
 bool has_forbidden_ccombos(const wchar_t* input) {
 	const wchar_t **c = &FORBIDDEN_CCOMBOS[0];
@@ -154,7 +158,7 @@ int get_vowel_harmony_state(const wchar_t* word) {
 int get_num_trailing_vowels(const wchar_t *word) {
 	int num = 0;
 	size_t len = wcslen(word);
-	while (vc_map(word[len-num-1]) == 'V' && num < len) ++num;
+	while (is_vowel(word[len-num-1]) && num < len) ++num;
 
 	return num;
 
@@ -163,7 +167,7 @@ int get_num_trailing_vowels(const wchar_t *word) {
 int get_num_beginning_vowels(const wchar_t *str) {
 	int num = 0;
 	size_t len = wcslen(str);
-	while (vc_map(str[num]) == 'V' && num < len) ++num;
+	while (is_vowel(str[num]) && num < len) ++num;
 
 	return num;
 }
@@ -171,7 +175,7 @@ int get_num_beginning_vowels(const wchar_t *str) {
 wchar_t get_first_consonant(const wchar_t *str) {
 	size_t len = wcslen(str);
 	int i = 0;
-	while (vc_map(str[i]) != 'C' && i < len) ++i;
+	while (!is_vowel(str[i]) && i < len) ++i;
 	if (i == len) return L'\0';
 	else return str[i];
 }
@@ -294,86 +298,100 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset) {
 
 }
 
-int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE) {
 
-	int vharm_state = 0;
-	wchar_t prev_first_c = L'\0';
+static int apply_filters(const syl_t *syl, const wchar_t *buffer, filter_state_t *fs) {
 
-	sylvec_t new_syllables = sylvec_create();
+	const wchar_t *s = syl->chars;
+	wchar_t first_c = get_first_consonant(s);
+	wchar_t *concatd = wstring_concat(buffer, s);
+	int syl_vharm = get_vowel_harmony_state(s);
 
-	for (int n = 0; n < num_syllables; ++n) {
-		bool ignore_last = (n == 0);
+	int r = -1;
 
-		syl_t syl = SYLLABLE_SOURCE(ignore_last);
-		const wchar_t *s = syl.chars;
+	if (syl_vharm > 2) r = 0;// this means the vharm was mixed
 
-		int syl_vharm = get_vowel_harmony_state(s);
+	else if (syl_vharm > 0 && fs->vharm != 0 && syl_vharm != fs->vharm) {
+		r = 0;
+	}
+	else if (fs->syln == 0 && has_forbidden_beginconsonant(s)) {
+		r = 0;
+	}
+	else if (fs->syln > 0 && syl->length < 2) {
+		r = 0;
+	}
+	else if (sylvec_contains(&fs->new_syllables, s)) {
+		r = 0;
+	}
+	else if (has_forbidden_ccombos(concatd)) {
+		r = 0;
+	}
+	else if (get_num_trailing_vowels(buffer) + get_num_beginning_vowels(s) > 2) {
+		r = 0;
+	}
+	else if ((fs->syln == fs->syln_target - 1) && (has_forbidden_endconsonant(s) || ends_in_wrong_vowelcombo(s))) {
+		r = 0;
+	}
+	else if (first_c && first_c == fs->prev_first_c) {
+		r = 0;
+	}
+	else { 
+		fs->prev_first_c = first_c;
+		r = 1;
+	}
 
-		while (1) {
-			wchar_t first_c = get_first_consonant(s);
-			wchar_t *concatd = wstring_concat(buffer, s);
-			syl_vharm = get_vowel_harmony_state(s);
+	free(concatd);
 
-			if (syl_vharm > 2) goto new_syllable; // this means the vharm was mixed
+	return r;
 
-			else if (syl_vharm > 0 && vharm_state != 0 && syl_vharm != vharm_state) {
-				goto new_syllable;
-			}
-			else if (n == 0 && has_forbidden_beginconsonant(s)) {
-				goto new_syllable;
-			}
-			else if (n > 0 && syl.length < 2) {
-				goto new_syllable;
-			}
-			else if (sylvec_contains(&new_syllables, s)) {
-				goto new_syllable;
-			}
-			else if (has_forbidden_ccombos(concatd)) {
-				goto new_syllable;
-			}
-			else if (get_num_trailing_vowels(buffer) + get_num_beginning_vowels(s) > 2) {
-				goto new_syllable;
-			}
-			else if ((n == num_syllables - 1) && (has_forbidden_endconsonant(s) || ends_in_wrong_vowelcombo(s))) {
-				goto new_syllable;
-			}
-			else if (first_c && first_c == prev_first_c) {
-				goto new_syllable;
-			}
-			else { 
-				free(concatd);
-				prev_first_c = first_c;
-				break;
-			}
+}
 
-new_syllable:
+int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE, const char* sylp) {
+
+	filter_state_t fstate = filter_state_new(num_syllables);
+	sylsrc_args_t sargs;
+	
+	sargs.num_syllables = num_syllables;
+
+	for (; fstate.syln < fstate.syln_target; ++fstate.syln) {
+
+		printf("sylp: %s -> %ls, %ld\n", sylp, buffer, num_syllables);
+
+		int length_class = sylp ? sylp[fstate.syln] - '0' : 0;
+		sargs.length_class = length_class;
+
+		bool ignore_last = (fstate.syln == 0);
+		sargs.ignore_last = ignore_last;
+
+		syl_t syl = SYLLABLE_SOURCE(&sargs);
+
+		while (!apply_filters(&syl, buffer, &fstate)) { 
 			syl_free(&syl);
-			syl = SYLLABLE_SOURCE(ignore_last);
-			s = syl.chars;
-
-			free(concatd);
-
+			syl = SYLLABLE_SOURCE(&sargs); 
 		}
 
 
-		if (vharm_state == 0) {
+		if (fstate.vharm == 0) {
 			// we're still in "undefined vocal harmony" => only either 'e's or 'i's have been encountered
-			if (syl_vharm > 0) {
-				vharm_state = syl_vharm;
+			int newsyl_vharm = get_vowel_harmony_state(syl.chars);
+			if (newsyl_vharm > 0) {
+				fstate.vharm = newsyl_vharm;
 			}
 		}
 
-		sylvec_pushstr(&new_syllables, s);
-		wcscat(buffer, s);
+		sylvec_pushstr(&fstate.new_syllables, syl.chars);
+		wcscat(buffer, syl.chars);
 		syl_free(&syl);
 
 	}
 
-	sylvec_destroy(&new_syllables);
+	filter_state_free(&fstate);
+
 
 	return 1;
 
 }
+
+
 
 int make_any_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE) {
 	for (int i = 0; i < num_syllables; ++i) {
@@ -383,4 +401,20 @@ int make_any_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLL
 	}
 
 	return 1;
+}
+
+filter_state_t filter_state_new(int num_syllables) {
+	filter_state_t fs;
+
+	fs.vharm = 0;
+	fs.prev_first_c = L'\0';
+	fs.new_syllables = sylvec_create();
+	fs.syln = 0;
+	fs.syln_target = num_syllables;
+
+	return fs;
+}
+
+void filter_state_free(filter_state_t *fs) {
+	sylvec_destroy(&fs->new_syllables);
 }

@@ -30,11 +30,13 @@ const vcp_t *find_longest_vc_match(const char* vc, long offset);
 
 wchar_t get_first_consonant(const wchar_t *str);
 
-int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE);
+int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE, const char *sylp);
 int make_any_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE);
 
 bool has_diphthong(const wchar_t* syllable); 
 bool has_double_vowel(const wchar_t* syllable);
 
+filter_state_t filter_state_new(int num_syllables);
+void filter_state_free(filter_state_t *fs);
 
 #endif
