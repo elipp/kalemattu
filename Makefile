@@ -1,5 +1,5 @@
 IDIR =include
-CC=gcc
+CC=clang
 CFLAGS=-I$(IDIR) -Wall -pedantic -g -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE 
 
 ODIR=obj

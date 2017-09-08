@@ -223,6 +223,9 @@ static void word_syllabify(word_t *word) {
 	char *vc_pattern = get_vc_pattern(word->chars);
 	size_t vc_len = strlen(vc_pattern);
 
+	wchar_t *cn = get_adjacent_consonants(word->chars, L'n');
+	free(cn);
+
 	while (offset < vc_len) {
 		const vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
 		const char *pat = longest->pattern;

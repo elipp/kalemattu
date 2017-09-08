@@ -78,6 +78,10 @@ L"kk", L"ll", L"mm", L"nn", L"pp", L"rr", L"ss", L"tt",
 L"sd", L"lk", L"lt", L"rt", L"tr", L"st", L"tk", L"mp", NULL
 };
 
+// seems like the only c-combos with j are 'rj', 'hj' and 'lj'
+// for v, they're 'rv', 'lv', 'sv', 'hv'
+// m:  'mm', 'lm', 'rm', 'mp', 'hm'
+
 static const wchar_t *FORBIDDEN_CCOMBOS[] = {
 L"nm", L"mn", L"sv", L"vs", L"kt", 
 L"tk", L"sr", L"sn", L"tv", L"sm", 

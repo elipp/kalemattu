@@ -321,7 +321,7 @@ syl_t synth_get_syllable(sylsrc_args_t *arg) {
 	vcp_t p = get_random_vcp_with_length_class(arg->length_class);
 	long plen = strlen(p.pattern);
 
-	printf("%s, %d\n", p.pattern, p.length_class);
+//	printf("%s, %d\n", p.pattern, p.length_class);
 	wchar_t *syl = malloc((plen+1)*sizeof(wchar_t));
 	
 	for (int i = 0; i < plen; ++i) {
