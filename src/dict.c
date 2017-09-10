@@ -170,6 +170,64 @@ static int word_push_syllable(word_t *w, const wchar_t *s) {
 	return 1;
 }
 
+typedef struct adjc_t {
+	wchar_t consonants[8];
+} adjc_t;
+
+static void print_all_ccombos(const wchar_t *w) {
+	
+	wchar_t temp[16];
+
+	if (!w || wcslen(w) < 1) return;
+
+	int wordlen = wcslen(w);
+	int i = 0, j = 0;
+
+	while (i < wordlen) {
+		j = 0;
+
+		while (!is_vowel(w[i+j])) {
+			temp[j] = w[i+j];
+			++j;
+		}
+
+		if (j > 1) {
+			temp[j] = L'\0';
+			printf("%ls\n", temp);
+		}
+
+		i += j + 1;
+	}
+}
+
+static void print_all_vcombos(const wchar_t *w) {
+	
+	wchar_t temp[16];
+
+	if (!w || wcslen(w) < 1) return;
+
+	int wordlen = wcslen(w);
+	int i = 0, j = 0;
+
+	while (i < wordlen) {
+		j = 0;
+
+		while (is_vowel(w[i+j])) {
+			temp[j] = w[i+j];
+			++j;
+		}
+
+		if (j > 1) {
+			temp[j] = L'\0';
+			printf("%ls\n", temp);
+		}
+
+		i += j + 1;
+	}
+}
+
+
+
 static wchar_t *get_adjacent_consonants(const wchar_t *w, wchar_t c) {
 	const wchar_t *t = wcschr(w, c);
 	if (!t) return NULL;
@@ -193,7 +251,7 @@ static wchar_t *get_adjacent_consonants(const wchar_t *w, wchar_t c) {
 		}
 
 		r[i] = L'\0';
-		printf("%ls (%ls)\n", r, w);
+		printf("%ls\n", r);
 		return r;
 
 	} else {
@@ -223,8 +281,7 @@ static void word_syllabify(word_t *word) {
 	char *vc_pattern = get_vc_pattern(word->chars);
 	size_t vc_len = strlen(vc_pattern);
 
-	wchar_t *cn = get_adjacent_consonants(word->chars, L'n');
-	free(cn);
+//	print_all_vcombos(word->chars);
 
 	while (offset < vc_len) {
 		const vcp_t *longest = find_longest_vc_match(vc_pattern, offset);
@@ -268,7 +325,7 @@ static void word_syllabify(word_t *word) {
 
 }
 
-static word_t word_create(const wchar_t* chars) {
+word_t word_create(const wchar_t* chars) {
 	word_t w;
 	w.chars = wcsdup(chars);
 	w.length = wcslen(chars);
@@ -278,6 +335,11 @@ static word_t word_create(const wchar_t* chars) {
 	word_syllabify(&w);
 
 	return w;
+}
+
+void word_destroy(word_t *w) {
+	free(w->chars);
+	sylvec_destroy(&w->syllables);
 }
 
 static dict_t dict_create(word_t *words, long num_words) {
@@ -362,6 +424,8 @@ int read_file_to_words(const char* filename) {
 
 	char *buf = read_file_to_buffer(fp, &filesize);
 	wchar_t *wbuf = convert_to_wchar(buf, filesize);
+
+	purge_stringbuffer_inplace(wbuf);
 
 	free(buf);
 	fclose(fp);

@@ -33,6 +33,12 @@ static int construct_random_word(long max_syllables, const kstate_t *state, wcha
 
 	int num_syllables = gauss_noise_with_limit(2, 1, 1, 4); 
 
+	word_t w = synth_get_word(num_syllables);
+	wcscpy(buffer, w.chars);
+	word_destroy(&w);
+
+	return 1;
+
 	if (num_syllables == 1) {
 		wcscat(buffer, get_single_syllable_word()->chars);
 		return 1;

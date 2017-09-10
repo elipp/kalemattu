@@ -128,6 +128,173 @@ static void compute_letter_freqs() {
 
 }
 
+typedef struct combo_freq_t {
+	const wchar_t *combo;
+	double freq;
+} combo_freq_t;
+
+static const combo_freq_t ccombo_freqs[] = {
+
+{ L"ll", 1212 },
+{ L"st", 1082 },
+{ L"tt", 745 },
+{ L"ss", 517 },
+{ L"kk", 420 },
+{ L"ks", 413 },
+{ L"nn", 408 },
+{ L"nt", 342 },
+{ L"mm", 337 },
+{ L"lm", 327 },
+{ L"nk", 322 },
+{ L"lt", 317 },
+{ L"ht", 313 },
+{ L"ts", 249 },
+{ L"sk", 230 },
+{ L"lk", 230 },
+{ L"ns", 193 },
+{ L"tk", 191 },
+{ L"rt", 183 },
+{ L"hd", 175 },
+{ L"lj", 159 },
+{ L"hm", 109 },
+{ L"ng", 94 },
+{ L"mp", 93 },
+{ L"rm", 89 },
+{ L"lv", 86 },
+{ L"sv", 83 },
+{ L"hk", 80 },
+{ L"rk", 78 },
+{ L"ps", 78 },
+{ L"rh", 73 },
+{ L"rv", 65 },
+{ L"rr", 62 },
+{ L"rj", 53 },
+{ L"pp", 48 },
+{ L"rs", 41 },
+{ L"np", 35 },
+{ L"nh", 34 },
+{ L"lp", 31 },
+{ L"hr", 30 },
+{ L"hj", 28 },
+{ L"rtt", 25 },
+{ L"ltt", 25 },
+{ L"nv", 23 },
+{ L"rkk", 21 },
+{ L"nl", 21 },
+{ L"lkk", 20 },
+{ L"rsk", 18 },
+{ L"rp", 18 },
+{ L"hn", 18 },
+{ L"mpp", 17 },
+{ L"nss", 15 },
+{ L"hl", 15 },
+{ L"sl", 11 },
+
+};
+
+static combo_freq_t *ccombo_freqs_cumulative;
+
+static combo_freq_t vcombo_freqs[] = {
+
+{L"a", 2908},
+{L"i", 1826},
+{L"ä", 1491},
+{L"aa", 1211},
+{L"ai", 1036},
+{L"uu", 851},
+{L"e", 836},
+{L"oi", 718},
+{L"ei", 670},
+{L"ie", 636},
+{L"au", 568},
+{L"ää", 550},
+{L"ui", 526},
+{L"uo", 506},
+{L"ii", 491},
+{L"ee", 487},
+{L"o", 274},
+{L"äi", 257},
+{L"u", 199},
+{L"ia", 176},
+{L"ea", 165},
+{L"ua", 158},
+{L"yö", 138},
+{L"eä", 132},
+{L"yy", 130},
+{L"ou", 104},
+{L"äy", 101},
+{L"iä", 93},
+{L"oa", 87},
+{L"oo", 84},
+{L"ae", 73},
+{L"eu", 60},
+{L"aai", 59},
+{L"yi", 55},
+{L"iu", 45},
+{L"öi", 39},
+{L"y", 35},
+{L"öy", 30},
+{L"äe", 29},
+{L"eää", 26},
+{L"io", 25},
+{L"ö", 23},
+{L"aua", 22},
+{L"iia", 20},
+{L"ue", 18},
+{L"ioi", 18},
+{L"yä", 17},
+{L"ey", 15},
+{L"eaa", 15},
+{L"oe", 12},
+{L"uaa", 11},
+{L"öö", 10},
+{L"oaa", 10},
+{L"iai", 10},
+
+};
+
+static combo_freq_t *vcombo_freqs_cumulative;
+
+static void compute_combo_freqs() {
+	static bool initialized = false;
+	if (initialized) return;
+
+	int num_cc = sizeof(ccombo_freqs)/sizeof(ccombo_freqs[0]);
+	int num_vv = sizeof(vcombo_freqs)/sizeof(vcombo_freqs[0]);
+
+	ccombo_freqs_cumulative = malloc(num_cc*sizeof(combo_freq_t));
+	combo_freq_t *cc = ccombo_freqs_cumulative;
+
+	vcombo_freqs_cumulative = malloc(num_vv*sizeof(combo_freq_t));
+	combo_freq_t *vv = vcombo_freqs_cumulative;
+
+	double cc_total = 0;
+	for (int i = 0; i < num_cc; ++i) {
+		cc_total += ccombo_freqs[i].freq;
+		cc[i].combo = ccombo_freqs[i].combo;
+		cc[i].freq = cc_total;
+	}
+
+	for (int i = 0; i < num_cc; ++i) {
+		cc[i].freq /= cc_total;
+	}
+
+	double vv_total = 0;
+	for (int i = 0; i < num_vv; ++i) {
+		vv_total += vcombo_freqs[i].freq;
+		vv[i].combo = vcombo_freqs[i].combo;
+		vv[i].freq = vv_total;
+	}
+
+	for (int i = 0; i < num_vv; ++i) {
+		vv[i].freq /= vv_total;
+	}
+
+
+	initialized = true;
+
+}
+
 // CV	15088	15088
 // CVC	10124	25212
 // CVV	4338	29550
@@ -353,7 +520,119 @@ const char *synth_get_sylp(int num_syllables) {
 	
 	if (strlen(iter->pattern) != num_syllables) return synth_get_sylp(num_syllables);
 
-	printf("returning sylp %s\n", iter->pattern);
 	return iter->pattern;
 
+}
+
+const wchar_t *get_vowel_combo(int clen) {
+	
+	double r = get_randomf();
+	combo_freq_t *iter = &vcombo_freqs_cumulative[0];
+
+	while (r >= iter->freq) ++iter;
+
+	if (wcslen(iter->combo) != clen) return get_vowel_combo(clen);
+
+	return iter->combo;
+
+
+}
+
+const wchar_t *get_consonant_combo(int clen) {
+	
+	double r = get_randomf();
+	combo_freq_t *iter = &ccombo_freqs_cumulative[0];
+
+	while (r >= iter->freq) ++iter;
+
+	if (wcslen(iter->combo) != clen) return get_consonant_combo(clen);
+
+	return iter->combo;
+
+
+}
+const wchar_t *get_combo(int vowel, int clen) {
+	if (vowel) {
+		return get_vowel_combo(clen);
+	}
+	else {
+		return get_consonant_combo(clen);
+	}
+}
+
+char *get_vcp_from_sylp(const char* sylp, int num_syllables) {
+	
+	char *vcp = malloc(num_syllables*4*sizeof(char));
+	vcp[0] = '\0';
+
+	for (int i = 0; i < num_syllables; ++i) {
+		int length_class = sylp[i] - '0';
+		vcp_t v = get_random_vcp_with_length_class(length_class);
+		strcat(vcp, v.pattern);
+	}
+
+	return vcp;
+
+}
+
+static int append_new_combo(wchar_t *buffer, const char* vcp, int index) {
+	int i = index;
+
+	char streak_beg = vcp[i];
+	int ibeg = i;
+
+	while (vcp[i] == streak_beg) ++i; 
+
+	int streak_len = i - ibeg;
+	printf("streak_len: %d\n", streak_len);
+
+	if (streak_len == 1) {
+		wchar_t c[2];
+		c[0] = synth_get_letter(streak_beg == 'V' ? SYNTH_VOWEL : SYNTH_CONSONANT);
+		c[1] = L'\0';
+		printf("got single letter: %ls\n", c);
+		wcscat(buffer, c);
+	}
+
+	else {
+		const wchar_t *p = get_combo(streak_beg == 'V' ? 1 : 0, streak_len);
+		printf("got combo: %ls\n", p);
+		wcscat(buffer, p);
+	}
+
+	printf("wordbuf: %ls\n", buffer);
+
+	return i;
+
+}
+
+word_t synth_get_word(int num_syllables) {
+
+	word_t word;
+
+	wchar_t wordbuf[64];
+	wordbuf[0] = L'\0';
+
+	compute_combo_freqs();
+
+	if (num_syllables == 1) {
+		word = word_create(get_single_syllable_word());
+		return word;
+	}
+
+	const char *sylp = synth_get_sylp(num_syllables);
+	char *vcp = get_vcp_from_sylp(sylp, num_syllables);
+	int vclen = strlen(vcp);
+	printf("VC PATTERN: %s\n", vcp);
+
+	int i = 0;
+	while (i < vclen) {
+		i = append_new_combo(wordbuf, vcp, i);
+	}
+
+	free(vcp);
+	printf("\n");
+
+	word = word_create(wordbuf);
+	return word;
 }

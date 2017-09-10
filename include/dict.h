@@ -18,6 +18,9 @@ int sylvec_pushsyl(sylvec_t *s, const syl_t *syl);
 int sylvec_pushstr(sylvec_t *s, const wchar_t *syl); 
 void sylvec_destroy(sylvec_t *s);
 
+word_t word_create(const wchar_t *chars);
+void word_destroy(word_t *w);
+
 const dict_t *get_dictionary();
 
 #endif

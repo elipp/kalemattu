@@ -217,3 +217,11 @@ char* const* tokenize(const char* input, const char *delims, long *num_tokens_ou
 
 	return ret;
 }
+
+void purge_stringbuffer_inplace(wchar_t *buffer) {
+	int len = wcslen(buffer);
+
+	for (int i = 0; i < len; ++i) {
+		if (!iswalpha(buffer[i])) buffer[i] = L' ';
+	}
+}

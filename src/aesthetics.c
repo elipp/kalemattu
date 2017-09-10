@@ -73,13 +73,8 @@ bool has_double_vowel(const wchar_t* syllable) {
 	return false;
 }
 
-static const wchar_t *ALLOWED_CCOMBOS[] = {
-L"kk", L"ll", L"mm", L"nn", L"pp", L"rr", L"ss", L"tt",
-L"sd", L"lk", L"lt", L"rt", L"tr", L"st", L"tk", L"mp", NULL
-};
-
 // seems like the only c-combos with j are 'rj', 'hj' and 'lj'
-// for v, they're 'rv', 'lv', 'sv', 'hv'
+// for v, they're 'rv', 'lv', 'sv', 'hv', 'tv'
 // m:  'mm', 'lm', 'rm', 'mp', 'hm'
 
 static const wchar_t *FORBIDDEN_CCOMBOS[] = {

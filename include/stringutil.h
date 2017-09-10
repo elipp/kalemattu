@@ -30,4 +30,6 @@ wchar_t *capitalize_first_dup(wchar_t *str);
 
 char* const* tokenize(const char* input, const char *delims, long *num_tokens_out);
 
+void purge_stringbuffer_inplace(wchar_t *buffer);
+
 #endif
