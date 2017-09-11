@@ -176,12 +176,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (!state.irc_enabled && !state.fcgi_enabled) { 
-		for (int i = 0; i < 10000; ++i) {
-			poem_t poem = generate_poem(&state);
-			//poem_print(&poem, state.LaTeX_output ? POEM_FORMAT_LATEX : POEM_FORMAT_VANILLA);
-			poem_free(&poem);
-		}
-		return 0;
+		poem_t poem = generate_poem(&state);
+		poem_print(&poem, state.LaTeX_output ? POEM_FORMAT_LATEX : POEM_FORMAT_VANILLA);
+		poem_free(&poem);
+		running = 0;
 	}
 
 	while (running) {

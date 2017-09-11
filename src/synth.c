@@ -538,9 +538,12 @@ static vcp_t get_random_vcp_with_length_class(int length_class) {
 
 syl_t synth_get_syllable(sylsrc_args_t *arg) {
 
-//	vcp_t p = get_random_vcp();
+	vcp_t p;
 
-	vcp_t p = get_random_vcp_with_length_class(arg->length_class);
+	if (arg) p = get_random_vcp_with_length_class(arg->length_class);
+	else p = get_random_vcp();
+	
+
 	long plen = strlen(p.pattern);
 
 //	printf("%s, %d\n", p.pattern, p.length_class);

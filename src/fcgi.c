@@ -30,6 +30,7 @@ static int num_poems = 0;
 static int num_boems = 0;
 static int num_noems = 0;
 static int num_moems = 0;
+static int num_woems = 0;
 
 static void return_poem(FCGX_Request *r, kstate_t *state) {
 	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
@@ -80,6 +81,8 @@ enum {
 	REQUEST_NOEM = 5,
 	REQUEST_MOEM = 7,
 
+	REQUEST_WOEM = 9,
+
 	REQUEST_TITLE_PAGE = 2,
 	REQUEST_FAVICON = 4,
 
@@ -101,6 +104,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 		}
 		else if (strcmp(value, "/p") == 0) {
 			state->synth_enabled = 0;
+			state->newsynth_enabled = 0;
 			state->rules_apply = 1;
 			return_poem(r, state);
 
@@ -109,6 +113,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 		}
 		else if (strcmp(value, "/n") == 0) {
 			state->synth_enabled = 1;
+			state->newsynth_enabled = 0;
 			state->rules_apply = 1;
 			return_poem(r, state);
 
@@ -117,6 +122,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 		}
 		else if (strcmp(value, "/b") == 0) {
 			state->synth_enabled = 0;
+			state->newsynth_enabled = 0;
 			state->rules_apply = 0;
 			return_poem(r, state);
 
@@ -125,11 +131,22 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 		}
 		else if (strcmp(value, "/m") == 0) {
 			state->synth_enabled = 1;
+			state->newsynth_enabled = 0;
 			state->rules_apply = 0;
 			return_poem(r, state);
 
 			++num_moems;
 			return REQUEST_MOEM;
+		}
+		else if (strcmp(value, "/w") == 0) {
+			state->synth_enabled = 0;
+			state->newsynth_enabled = 1;
+			state->rules_apply = 0;
+			return_poem(r, state);
+
+			++num_woems;
+			return REQUEST_WOEM;
+
 		}
 
 		else {

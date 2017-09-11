@@ -490,8 +490,12 @@ syl_t dict_get_random_syllable_any(sylsrc_args_t *arg) {
 		w = dict_get_random_word();
 	}
 
-	syl_t s = get_random_syllable_from_word(w, arg->ignore_last);
+	syl_t s;
 
+
+	if (arg) s = get_random_syllable_from_word(w, arg->ignore_last);
+	else s = get_random_syllable_from_word(w, false);
+	
 	return s;
 }
 

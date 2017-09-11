@@ -397,7 +397,7 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SY
 
 int make_any_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SYLLABLE_SOURCE) {
 	for (int i = 0; i < num_syllables; ++i) {
-		syl_t syl = SYLLABLE_SOURCE(false);
+		syl_t syl = SYLLABLE_SOURCE(NULL);
 		wcscat(buffer, syl.chars);
 		syl_free(&syl);
 	}
