@@ -39,6 +39,7 @@ bool has_double_vowel(const wchar_t* syllable);
 filter_state_t filter_state_new(int num_syllables);
 void filter_state_free(filter_state_t *fs);
 
+bool is_forbidden_endconsonant(wchar_t c);
 bool has_forbidden_endconsonant(const wchar_t *word);
 int get_vowel_harmony_state(const wchar_t* word);
 

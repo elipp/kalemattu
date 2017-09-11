@@ -424,7 +424,7 @@ static const vcp_freq_t vc_freqs_cumulative[] = {
 };
 
 
-wchar_t synth_get_letter(int want_vowel) {
+static wchar_t synth_get_letter(int want_vowel, int vharm_state) {
 
 	compute_letter_freqs(); // this is run only once
 
@@ -434,19 +434,32 @@ wchar_t synth_get_letter(int want_vowel) {
 	while (r >= iter->freq) {
 	       	++iter;
 	}
+
 	//printf("%f -> %f (%lc)\n\n", r, iter->freq, iter->character);
 
 	wchar_t c = iter->character;
 
 	switch(want_vowel) {
 		case SYNTH_VOWEL:
-			if (is_vowel(c)) return c;
-			else return synth_get_letter(want_vowel);
+			if (is_vowel(c)) {
+				wchar_t cs[2];
+				cs[0] = c;
+				cs[1] = L'\0';
+				int h = get_vowel_harmony_state(cs);
+				if (h > 0) {
+					if (h == vharm_state) {
+						return c;
+					}
+					else return synth_get_letter(want_vowel, vharm_state);
+				}
+				else return c;
+			}
+			else return synth_get_letter(want_vowel, vharm_state);
 			break;
 
 		case SYNTH_CONSONANT:
 			if (!is_vowel(c)) return c;
-			else return synth_get_letter(want_vowel);
+			else return synth_get_letter(want_vowel, vharm_state);
 
 		case SYNTH_ANY:
 			return c;
@@ -493,9 +506,9 @@ syl_t synth_get_syllable(sylsrc_args_t *arg) {
 	
 	for (int i = 0; i < plen; ++i) {
 		if (p.pattern[i] == 'C') {
-			syl[i] = synth_get_letter(SYNTH_CONSONANT);
+			syl[i] = synth_get_letter(SYNTH_CONSONANT, 0);
 		} else {
-			syl[i] = synth_get_letter(SYNTH_VOWEL);
+			syl[i] = synth_get_letter(SYNTH_VOWEL, 0);
 		}
 	}
 
@@ -524,16 +537,24 @@ const char *synth_get_sylp(int num_syllables) {
 
 }
 
-const wchar_t *get_vowel_combo(int clen) {
+const wchar_t *get_vowel_combo(int clen, int vharm_state) {
 	
 	double r = get_randomf();
 	combo_freq_t *iter = &vcombo_freqs_cumulative[0];
 
 	while (r >= iter->freq) ++iter;
 
-	if (wcslen(iter->combo) != clen) return get_vowel_combo(clen);
+	if (wcslen(iter->combo) != clen) {
+		return get_vowel_combo(clen, vharm_state);
+	} else {
+		int h = get_vowel_harmony_state(iter->combo);
+		if (h > 0) {
+			if (h == vharm_state) return iter->combo;
+			else return get_vowel_combo(clen, vharm_state);
+		}
+		else return iter->combo;
+	}
 
-	return iter->combo;
 
 
 }
@@ -551,9 +572,9 @@ const wchar_t *get_consonant_combo(int clen) {
 
 
 }
-const wchar_t *get_combo(int vowel, int clen) {
+const wchar_t *get_combo(int vowel, int clen, int vharm_state) {
 	if (vowel) {
-		return get_vowel_combo(clen);
+		return get_vowel_combo(clen, vharm_state);
 	}
 	else {
 		return get_consonant_combo(clen);
@@ -575,7 +596,19 @@ char *get_vcp_from_sylp(const char* sylp, int num_syllables) {
 
 }
 
-static int append_new_combo(wchar_t *buffer, const char* vcp, int index) {
+static char *get_grep_format(const char* w) {
+	int len = strlen(w);
+	char *r = malloc((len+2+1)*sizeof(char));
+	r[0] = '^';
+	memcpy(r+1, w, len);
+	r[len+1] = '$';
+	r[len+2] = '\0';
+
+	return r;
+
+}
+
+static int append_new_combo(wchar_t *buffer, const char* vcp, int index, int target_len, int vharm_state) {
 	int i = index;
 
 	char streak_beg = vcp[i];
@@ -588,14 +621,34 @@ static int append_new_combo(wchar_t *buffer, const char* vcp, int index) {
 
 	if (streak_len == 1) {
 		wchar_t c[2];
-		c[0] = synth_get_letter(streak_beg == 'V' ? SYNTH_VOWEL : SYNTH_CONSONANT);
 		c[1] = L'\0';
-		printf("got single letter: %ls\n", c);
+
+		if (i >= target_len - 1) {
+			do {
+				c[0] = synth_get_letter(streak_beg == 'V' ? SYNTH_VOWEL : SYNTH_CONSONANT, vharm_state);
+				printf("checking if %ls is forbidden\n", c);
+			} while (is_forbidden_endconsonant(c[0])); // this actually works for vowels also
+		}
+		else {
+			c[0] = synth_get_letter(streak_beg == 'V' ? SYNTH_VOWEL : SYNTH_CONSONANT, vharm_state);
+			printf("got single letter: %ls\n", c);
+		}
 		wcscat(buffer, c);
 	}
 
 	else {
-		const wchar_t *p = get_combo(streak_beg == 'V' ? 1 : 0, streak_len);
+		const wchar_t *p = NULL;
+		if (i >= target_len - 1) {
+			do {
+				p = get_combo(streak_beg == 'V' ? 1 : 0, streak_len, vharm_state);
+				printf("checking if %ls is forbidden\n", p);
+			} while (is_forbidden_endconsonant(p[streak_len-1])); 
+		}
+
+		else {
+			p = get_combo(streak_beg == 'V' ? 1 : 0, streak_len, vharm_state);
+		}
+
 		printf("got combo: %ls\n", p);
 		wcscat(buffer, p);
 	}
@@ -620,18 +673,44 @@ word_t synth_get_word(int num_syllables) {
 		return word;
 	}
 
-	const char *sylp = synth_get_sylp(num_syllables);
-	char *vcp = get_vcp_from_sylp(sylp, num_syllables);
+	const char *sylp = NULL;
+	char *sgrep = NULL;
+	char *vcp = NULL;
+
+	while (1) {
+		sylp = synth_get_sylp(num_syllables);
+		vcp = get_vcp_from_sylp(sylp, num_syllables);
+		sgrep = get_grep_format(vcp);
+
+		printf("%s, %s\n", sylp, sgrep);
+
+		if (!strstr(sgrep, "VVV") && !strstr(sgrep, "^CC") && !strstr(sgrep, "CC$")) break;
+
+		free(sgrep);
+		free(vcp);
+	}
+
+	free(sgrep);
+
+
 	int vclen = strlen(vcp);
 	printf("VC PATTERN: %s\n", vcp);
 
 	int i = 0;
+	int vharm_state = 0;
+
 	while (i < vclen) {
-		i = append_new_combo(wordbuf, vcp, i);
+		i = append_new_combo(wordbuf, vcp, i, vclen, vharm_state);
+		int h = get_vowel_harmony_state(wordbuf);
+		if (vharm_state == 0) {
+			if (h > 0) {
+				vharm_state = h;
+			}
+		}
 	}
 
-	free(vcp);
 	printf("\n");
+	free(vcp);
 
 	word = word_create(wordbuf);
 	return word;

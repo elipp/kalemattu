@@ -133,8 +133,7 @@ bool has_forbidden_beginconsonant(const wchar_t *input) {
 	return false;
 }
 
-bool has_forbidden_endconsonant(const wchar_t *input) {
-	wchar_t c = input[wcslen(input)-1];
+bool is_forbidden_endconsonant(wchar_t c) {
 	int i = 0;
 
 	while (i < wcslen(FORBIDDEN_ENDCONSONANTS)) {
@@ -143,6 +142,12 @@ bool has_forbidden_endconsonant(const wchar_t *input) {
 	}
 
 	return false;
+
+}
+
+bool has_forbidden_endconsonant(const wchar_t *input) {
+	wchar_t c = input[wcslen(input)-1];
+	return is_forbidden_endconsonant(c);
 }
 
 int get_vowel_harmony_state(const wchar_t* word) {
