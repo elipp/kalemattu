@@ -162,7 +162,7 @@ int get_vowel_harmony_state(const wchar_t* word) {
 int get_num_trailing_vowels(const wchar_t *word) {
 	int num = 0;
 	size_t len = wcslen(word);
-	while (is_vowel(word[len-num-1]) && num < len) ++num;
+	while (num < len && is_vowel(word[len-num-1])) ++num;
 
 	return num;
 
@@ -171,7 +171,7 @@ int get_num_trailing_vowels(const wchar_t *word) {
 int get_num_beginning_vowels(const wchar_t *str) {
 	int num = 0;
 	size_t len = wcslen(str);
-	while (is_vowel(str[num]) && num < len) ++num;
+	while (num < len && is_vowel(str[num])) ++num;
 
 	return num;
 }

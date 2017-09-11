@@ -641,7 +641,7 @@ const wchar_t *get_combo(int vowel, int clen, int *vharm_state) {
 
 char *get_vcp_from_sylp(const char* sylp, int num_syllables) {
 	
-	char *vcp = malloc(num_syllables*4*sizeof(char));
+	char *vcp = malloc(num_syllables*4*sizeof(char) + 1);
 	vcp[0] = '\0';
 
 	for (int i = 0; i < num_syllables; ++i) {
