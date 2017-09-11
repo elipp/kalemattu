@@ -274,7 +274,7 @@ static char *get_sylpattern(const word_t *word) {
 	return strdup(buffer);
 }
 
-static void word_syllabify(word_t *word) {
+static int word_syllabify(word_t *word) {
 
 	size_t offset = 0;
 
@@ -290,7 +290,10 @@ static void word_syllabify(word_t *word) {
 
 		if (plen < 1) {
 			// didn't find a sensible vc match
-			break;
+			printf("warning: couldn't find a vcp match for word %ls\n", word->chars);
+			word_push_syllable(word, word->chars);
+			free(vc_pattern);
+			return 0;
 		}
 
 		else {
@@ -320,7 +323,9 @@ static void word_syllabify(word_t *word) {
 		offset = offset + plen;
 	}
 
+
 	free(vc_pattern);
+	return 1;
 
 
 }
@@ -465,8 +470,13 @@ static syl_t get_random_syllable_from_word(const word_t *w, bool ignore_last) {
 	if (w->syllables.length == 1) { return w->syllables.syllables[0]; }
 
 	long max;
+
 	if (ignore_last) max = w->syllables.length - 1;
 	else max = w->syllables.length;
+	
+	if (max == 0) {
+		printf("MAX is 0 %ls\n", w->chars);
+	}
 
 	long r = get_random(0, max);
 
@@ -480,9 +490,7 @@ syl_t dict_get_random_syllable_any(sylsrc_args_t *arg) {
 		w = dict_get_random_word();
 	}
 
-	bool ignore_last = *(bool*)arg;
-
-	syl_t s = get_random_syllable_from_word(w, ignore_last);
+	syl_t s = get_random_syllable_from_word(w, arg->ignore_last);
 
 	return s;
 }

@@ -28,6 +28,7 @@ typedef struct kstate_t {
 	const char* irc_nick;
 	long num_irc_channels;
 	int synth_enabled;
+	int newsynth_enabled;
 
 	int fcgi_enabled;
 	const char* fcgi_addr;

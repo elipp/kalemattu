@@ -358,8 +358,6 @@ int make_valid_word(wchar_t *buffer, long num_syllables, SYLLABLE_SOURCE_FUNC SY
 
 	for (; fstate.syln < fstate.syln_target; ++fstate.syln) {
 
-		printf("sylp: %s -> %ls, %ld\n", sylp, buffer, num_syllables);
-
 		int length_class = sylp ? sylp[fstate.syln] - '0' : 0;
 		sargs.length_class = length_class;
 

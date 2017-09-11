@@ -53,7 +53,7 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 
 	opterr = 0;
 	int c;
-	while ((c = getopt (argc, argv, "clSs:n:i:N:f:")) != -1) {
+	while ((c = getopt (argc, argv, "clSws:n:i:N:f:")) != -1) {
 		switch (c)
 		{
 			case 'c':
@@ -86,6 +86,9 @@ static int get_commandline_options(int argc, char **argv, kstate_t *state) {
 			case 'f':
 				state->fcgi_enabled = 1;
 				state->fcgi_addr = strdup(optarg);
+				break;
+			case 'w':
+				state->newsynth_enabled = 1;
 				break;
 			case '?':
 				if (optopt == 'n') {
@@ -131,6 +134,7 @@ kstate_t get_default_state() {
 	defaults.num_irc_channels = 0;
 	defaults.fcgi_enabled = 0;
 	defaults.synth_enabled = 0;
+	defaults.newsynth_enabled = 0;
 
 	return defaults;
 }
@@ -172,9 +176,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (!state.irc_enabled && !state.fcgi_enabled) { 
-		poem_t poem = generate_poem(&state);
-		poem_print(&poem, state.LaTeX_output ? POEM_FORMAT_LATEX : POEM_FORMAT_VANILLA);
-		poem_free(&poem);
+		for (int i = 0; i < 100000; ++i) {
+			poem_t poem = generate_poem(&state);
+			//poem_print(&poem, state.LaTeX_output ? POEM_FORMAT_LATEX : POEM_FORMAT_VANILLA);
+			poem_free(&poem);
+		}
 		return 0;
 	}
 
