@@ -33,6 +33,7 @@ static int num_moems = 0;
 static int num_woems = 0;
 
 static void return_poem(FCGX_Request *r, kstate_t *state) {
+
 	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
 
 	poem_t poem = generate_poem(state);
@@ -42,6 +43,68 @@ static void return_poem(FCGX_Request *r, kstate_t *state) {
 	poem_free(&poem);
 	free(p);
 
+}
+
+typedef struct chinese_char_t {
+    unsigned char bytes[3];
+} chinese_char_t;
+
+static chinese_char_t get_char_from_U(unsigned short codepoint) {
+    chinese_char_t c;
+
+    c.bytes[0] = 0xE0 | ((codepoint >> 12) & 0x0F);
+    c.bytes[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+    c.bytes[2] = 0x80 | ((codepoint >> 0) & 0x3F);
+
+    return c;
+}
+
+static chinese_char_t get_random_common_chinese_char() {
+    // range is U+4E00-9FFF for common 
+    static const unsigned short diff = 0x9FFF - 0x4E00;
+    unsigned short codepage = rand() % diff + 0x4E00;
+
+    return get_char_from_U(codepage);
+}
+
+
+
+void test_chinese() {
+
+}
+
+static void return_chinesepoem(FCGX_Request *r) {
+    chinese_char_t poem[3][5];
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 5; ++j) {
+            poem[i][j] = get_random_common_chinese_char();
+        }
+    }
+
+    char *p = malloc(3*5*sizeof(chinese_char_t) + 256);
+    p[0] = '\0';
+    strcat(p, "<h3> LULZ </h3>\r\n\r\n<p>");
+    static const char *br = "\r\n\r\n<br>\r\n\r\n";
+    int offset = strlen(p);
+
+    const int brlen = strlen(br);
+
+    for (int i = 0; i < 3; ++i) {
+        memcpy(p + offset, &poem[i][0], 5*sizeof(chinese_char_t));
+        offset += 5 * sizeof(chinese_char_t);
+        memcpy(p + offset, br, brlen);
+        offset += brlen;
+    }
+
+    const char *end = "</p>";
+    memcpy(p + offset, end, strlen(end) + 1); // +1 to get the '\0'
+    offset += strlen(end) + 1;
+
+    FCGX_PutStr(p, offset, r->out);
+
+    printf("%s\n", p);
+
+    free(p);
 }
 
 static char *titlepage;
@@ -82,6 +145,7 @@ enum {
 	REQUEST_MOEM = 7,
 
 	REQUEST_WOEM = 9,
+    REQUEST_COEM = 11,
 
 	REQUEST_TITLE_PAGE = 2,
 	REQUEST_FAVICON = 4,
@@ -148,6 +212,10 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 			return REQUEST_WOEM;
 
 		}
+        else if (strcmp(value, "/c") == 0) {
+            return_chinesepoem(r);
+            return REQUEST_COEM;
+        }
 
 		else {
 			return REQUEST_UNKNOWN;
@@ -200,7 +268,7 @@ static void *run_fcgi(void *arg) {
 		FCGX_Finish_r(&request);
 
 		if (r & REQUEST_POEM) {
-			fprintf(stderr, "[%s] p/b/n/m = %d/%d/%d/%d = %d\n", get_timestring(), num_poems, num_boems, num_noems, num_moems, num_poems + num_boems + num_noems + num_moems);
+			fprintf(stderr, "[%s] p/b/n/m/w = %d/%d/%d/%d/%d = %d\n", get_timestring(), num_poems, num_boems, num_noems, num_moems, num_woems, num_poems + num_boems + num_noems + num_moems + num_woems);
 		}
 
 	}

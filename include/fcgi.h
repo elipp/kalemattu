@@ -7,4 +7,6 @@
 #include "types.h"
 int start_fcgi_thread(struct kstate_t *state, pthread_t *t);
 
+void test_chinese();
+
 #endif
