@@ -11,7 +11,7 @@ DEPS=include/types.h
 REV=$(shell git rev-parse --short HEAD)
 COMMITDATE=$(shell git log -1 --date=format:'%d\\/%m\\/%Y' --format=%cd)
 
-_OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o fcgi.o synth.o
+_OBJ = irc.o aesthetics.o distributions.o dict.o poem.o stringutil.o fcgi.o synth.o han.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS)

@@ -7,6 +7,7 @@
 #include "fcgi.h"
 #include "types.h"
 #include "poem.h"
+#include "han.h"
 
 #include <time.h>
 
@@ -31,6 +32,7 @@ static int num_boems = 0;
 static int num_noems = 0;
 static int num_moems = 0;
 static int num_woems = 0;
+static int num_coems = 0;
 
 static void return_poem(FCGX_Request *r, kstate_t *state) {
 
@@ -73,7 +75,7 @@ void test_chinese() {
 
 }
 
-static void return_chinesepoem(FCGX_Request *r) {
+static void return_chinesepoem2(FCGX_Request *r) {
     chinese_char_t poem[3][5];
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 5; ++j) {
@@ -83,6 +85,9 @@ static void return_chinesepoem(FCGX_Request *r) {
 
     char *p = malloc(3*5*sizeof(chinese_char_t) + 256);
     p[0] = '\0';
+
+	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
+
     strcat(p, "<h3> LULZ </h3>\r\n\r\n<p>");
     static const char *br = "\r\n\r\n<br>\r\n\r\n";
     int offset = strlen(p);
@@ -102,9 +107,38 @@ static void return_chinesepoem(FCGX_Request *r) {
 
     FCGX_PutStr(p, offset, r->out);
 
-    printf("%s\n", p);
+    //printf("%s\n", p);
 
     free(p);
+}
+
+static void cat_n_han(char *buffer, int n) {
+    for (int i = 0; i < n; ++i) {
+        const char* han = get_random_han();
+        strcat(buffer, han);
+    }
+}
+
+static void return_chinesepoem(FCGX_Request *r) {
+    static char buffer[1024];
+    buffer[0] = '\0';
+
+	FCGX_FPrintF(r->out, "Content-Type: text/html; charset=utf-8\r\n\r\n");
+
+    strcat(buffer, "<h3>");
+    cat_n_han(buffer, 4);
+    strcat(buffer, "</h3>\r\n");
+    static const char *br = "<br>\r\n";
+
+    for (int i = 0; i < 3; ++i) {
+        cat_n_han(buffer, 4);
+        strcat(buffer, br);
+    }
+
+    strcat(buffer, "</p>\r\n");
+
+    FCGX_PutStr(buffer, strlen(buffer), r->out);
+
 }
 
 static char *titlepage;
@@ -214,6 +248,7 @@ static int handle_fcgi_request(FCGX_Request *r, kstate_t *state) {
 		}
         else if (strcmp(value, "/c") == 0) {
             return_chinesepoem(r);
+            ++num_coems;
             return REQUEST_COEM;
         }
 

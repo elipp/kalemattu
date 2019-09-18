@@ -321,6 +321,9 @@ char* poem_print_to_fcgi_buffer(const poem_t *poem, int *len) {
 	offset += sprintf(buffer + offset, "\r\n");
 	*len = offset;
 
+
+    printf("%s\n", buffer);
+
 	return buffer;
 
 }
