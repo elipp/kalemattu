@@ -303,7 +303,7 @@ static void *run_fcgi(void *arg) {
 		FCGX_Finish_r(&request);
 
 		if (r & REQUEST_POEM) {
-			fprintf(stderr, "[%s] p/b/n/m/w = %d/%d/%d/%d/%d = %d\n", get_timestring(), num_poems, num_boems, num_noems, num_moems, num_woems, num_poems + num_boems + num_noems + num_moems + num_woems);
+			fprintf(stderr, "[%s] p/b/n/m/w/c = %d/%d/%d/%d/%d/%d = %d\n", get_timestring(), num_poems, num_boems, num_noems, num_moems, num_woems, num_coems, num_poems + num_boems + num_noems + num_moems + num_woems + num_coems);
 		}
 
 	}

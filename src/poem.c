@@ -322,7 +322,7 @@ char* poem_print_to_fcgi_buffer(const poem_t *poem, int *len) {
 	*len = offset;
 
 
-    printf("%s\n", buffer);
+//    printf("%s\n", buffer);
 
 	return buffer;
 
